@@ -1,0 +1,38 @@
+# VS Code
+.vscode/
+
+# Python
+__pycache__/
+.venv/
+*.py[cod]
+*$py.class
+.python-version
+
+# Godot
+.godot/
+# Godot build outputs
+*.pck
+*.x86_64
+*.exe
+*.wasm
+*.js
+spritebench_gdscript/build/
+data_spritebench_*_x86_64/
+
+# .NET / C#
+bin/
+obj/
+*.sln.dotsettings.user
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Go
+/spritebench_graphicsgd/releases/
+/spritebench_graphicsgd/spritebench_graphicsgd
+go.sum
+
+# Misc
+*.log
+.DS_Store

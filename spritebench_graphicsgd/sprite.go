@@ -1,0 +1,50 @@
+package main
+
+import (
+	"math"
+
+	"graphics.gd/classdb/Node"
+	"graphics.gd/classdb/SceneTree"
+	"graphics.gd/classdb/Sprite2D"
+	"graphics.gd/classdb/Texture2D"
+	"graphics.gd/variant/Float"
+	"graphics.gd/variant/Vector2"
+)
+
+type Sprite struct {
+	Sprite2D.Extension[Sprite]
+
+	angle Float.X
+	speed Float.X
+	pos   Vector2.XY
+	size2 Vector2.XY
+}
+
+func NewSprite(texture Texture2D.Instance, fromNode Node.Instance) *Sprite {
+	s := &Sprite{}
+	s.angle = Float.X(Float.RandomBetween(0, math.Pi*2))
+	s.speed = Float.X(Float.RandomBetween(100, 600))
+	windowSize := SceneTree.Get(fromNode).Root().AsWindow().Size()
+	s.pos = Vector2.XY{X: Float.X(windowSize.X) / 2, Y: Float.X(windowSize.Y) / 2}
+	s.AsSprite2D().SetTexture(texture)
+	s.AsNode2D().SetPosition(s.pos)
+	s.size2 = Vector2.MulX(s.AsSprite2D().Texture().GetSize(), 0.5)
+	return s
+}
+
+func (s *Sprite) Process(delta Float.X) {
+	s.pos = Vector2.Add(s.pos, Vector2.XY{
+		X: Float.X(math.Cos(float64(s.angle))) * s.speed * delta,
+		Y: Float.X(math.Sin(float64(s.angle))) * s.speed * delta,
+	})
+	s.AsNode2D().SetPosition(s.pos)
+
+	windowSize := SceneTree.Get(s.AsNode()).Root().AsWindow().Size()
+
+	if s.pos.X < s.size2.X || s.pos.X > Float.X(windowSize.X)-s.size2.X {
+		s.angle = Float.X(math.Pi) - s.angle
+	}
+	if s.pos.Y < s.size2.Y || s.pos.Y > Float.X(windowSize.Y)-s.size2.Y {
+		s.angle = -s.angle
+	}
+}
