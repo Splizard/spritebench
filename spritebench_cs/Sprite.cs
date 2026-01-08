@@ -9,12 +9,14 @@ public partial class Sprite : Sprite2D
 	private float _angle = (float)GD.RandRange(0, Mathf.Tau);
 	private float _speed = (float)GD.RandRange(100, 600);
 	private Vector2 _pos;
+	private Vector2 _windowSize;
 
 	public override void _Ready()
 	{
 		Texture = Icon;
 		Position = (Vector2)GetWindow().Size / 2;
 		_pos = Position;
+		_windowSize = (Vector2)GetWindow().Size;
 	}
 
 	public override void _Process(double delta)
@@ -22,11 +24,11 @@ public partial class Sprite : Sprite2D
 		_pos += new Vector2(Mathf.Cos(_angle), Mathf.Sin(_angle)) * _speed * (float)delta;
 		Position = _pos;
 
-		if (Position.X < Size2.X || Position.X > GetWindow().Size.X - Size2.X)
+		if (Position.X < Size2.X || Position.X > _windowSize.X - Size2.X)
 		{
 			_angle = Mathf.Pi - _angle;
 		}
-		if (Position.Y < Size2.Y || Position.Y > GetWindow().Size.Y - Size2.Y)
+		if (Position.Y < Size2.Y || Position.Y > _windowSize.Y - Size2.Y)
 		{
 			_angle = -_angle;
 		}

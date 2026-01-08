@@ -14,10 +14,11 @@ import (
 type Sprite struct {
 	Sprite2D.Extension[Sprite]
 
-	angle Float.X
-	speed Float.X
-	pos   Vector2.XY
-	size2 Vector2.XY
+	angle      Float.X
+	speed      Float.X
+	pos        Vector2.XY
+	size2      Vector2.XY
+	windowSize Vector2.XY
 }
 
 func NewSprite(texture Texture2D.Instance, fromNode Node.Instance) *Sprite {
@@ -29,6 +30,8 @@ func NewSprite(texture Texture2D.Instance, fromNode Node.Instance) *Sprite {
 	s.AsSprite2D().SetTexture(texture)
 	s.AsNode2D().SetPosition(s.pos)
 	s.size2 = Vector2.MulX(s.AsSprite2D().Texture().GetSize(), 0.5)
+	s.windowSize = Vector2.XY{X: Float.X(windowSize.X), Y: Float.X(windowSize.Y)}
+
 	return s
 }
 
@@ -39,12 +42,10 @@ func (s *Sprite) Process(delta Float.X) {
 	})
 	s.AsNode2D().SetPosition(s.pos)
 
-	windowSize := SceneTree.Get(s.AsNode()).Root().AsWindow().Size()
-
-	if s.pos.X < s.size2.X || s.pos.X > Float.X(windowSize.X)-s.size2.X {
+	if s.pos.X < s.size2.X || s.pos.X > Float.X(s.windowSize.X)-s.size2.X {
 		s.angle = Float.X(math.Pi) - s.angle
 	}
-	if s.pos.Y < s.size2.Y || s.pos.Y > Float.X(windowSize.Y)-s.size2.Y {
+	if s.pos.Y < s.size2.Y || s.pos.Y > Float.X(s.windowSize.Y)-s.size2.Y {
 		s.angle = -s.angle
 	}
 }
