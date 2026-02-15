@@ -12,7 +12,8 @@ def prettify_label(label):
     name_map = {
         "cs": "C#",
         "gds": "GDScript",
-        "graphicsgd": "GraphicsGD (Go 1.25)",
+        "graphicsgd": "GraphicsGD (08-01-2026)",
+        "graphicsgd_11": "GraphicsGD (11-01-2026)",
         "graphicsgd126": "GraphicsGD (Go 1.26rc1)",
     }
     
@@ -20,6 +21,8 @@ def prettify_label(label):
     
     if "html5" in parts:
         return f"{name} (HTML5)"
+    if "forwardplus" in parts:
+        return f"{name} (Forward+)"
     return name
 
 def main():

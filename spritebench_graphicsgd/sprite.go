@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"graphics.gd/classdb/Node"
+	"graphics.gd/classdb/Node2D"
 	"graphics.gd/classdb/SceneTree"
 	"graphics.gd/classdb/Sprite2D"
 	"graphics.gd/classdb/Texture2D"
@@ -19,6 +20,8 @@ type Sprite struct {
 	pos        Vector2.XY
 	size2      Vector2.XY
 	windowSize Vector2.XY
+
+	advanced Node2D.Advanced
 }
 
 func NewSprite(texture Texture2D.Instance, fromNode Node.Instance) *Sprite {
@@ -31,6 +34,7 @@ func NewSprite(texture Texture2D.Instance, fromNode Node.Instance) *Sprite {
 	s.AsNode2D().SetPosition(s.pos)
 	s.size2 = Vector2.MulX(s.AsSprite2D().Texture().GetSize(), 0.5)
 	s.windowSize = Vector2.XY{X: Float.X(windowSize.X), Y: Float.X(windowSize.Y)}
+	s.advanced = Node2D.Advanced(s.AsNode2D())
 
 	return s
 }
@@ -40,7 +44,8 @@ func (s *Sprite) Process(delta Float.X) {
 		X: Float.X(math.Cos(float64(s.angle))) * s.speed * delta,
 		Y: Float.X(math.Sin(float64(s.angle))) * s.speed * delta,
 	})
-	s.AsNode2D().SetPosition(s.pos)
+	// s.AsNode2D().SetPosition(s.pos)
+	s.advanced.SetPosition(s.pos)
 
 	if s.pos.X < s.size2.X || s.pos.X > Float.X(s.windowSize.X)-s.size2.X {
 		s.angle = Float.X(math.Pi) - s.angle

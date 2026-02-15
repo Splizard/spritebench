@@ -31,8 +31,6 @@ func (m *Main) Ready() {
 
 	icon := Resource.Load[Texture2D.Instance]("res://icon.svg")
 
-	println("Count: ", count)
-
 	for i := 0; i < count; i++ {
 		m.AsNode().AddChild(NewSprite(icon, m.AsNode()).AsNode())
 	}
