@@ -8,10 +8,6 @@
 
 config_version=5
 
-[animation]
-
-compatibility/default_parent_skeleton_in_mesh_instance_3d=true
-
 [application]
 
 config/name="spritebench"
@@ -26,11 +22,12 @@ window/size/viewport_height=1080
 window/size/resizable=false
 window/vsync/vsync_mode=0
 
-[dotnet]
+[physics]
 
-project/assembly_name="spritebench"
+3d/physics_engine="Jolt Physics"
 
 [rendering]
 
+rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
