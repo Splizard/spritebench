@@ -8,3 +8,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 godot = "0.4.5"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
