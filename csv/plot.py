@@ -12,9 +12,8 @@ def prettify_label(label):
     name_map = {
         "cs": "C#",
         "gds": "GDScript",
-        "graphicsgd": "GraphicsGD (08-01-2026)",
-        "graphicsgd_11": "GraphicsGD (11-01-2026)",
-        "graphicsgd126": "GraphicsGD (Go 1.26rc1)",
+        "graphicsgd": "GraphicsGD",
+        "rust": "Rust",
     }
     
     name = name_map.get(parts[0], parts[0].capitalize())

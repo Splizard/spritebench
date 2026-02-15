@@ -46,6 +46,8 @@ impl INode2D for Main {
                     self.base_mut().remove_child(&child);
                 }
                 let mut edit = TextEdit::new_alloc();
+                let window_size = self.base().get_window().unwrap().get_size();
+                edit.set_size(Vector2::new(window_size.x as f32, window_size.y as f32));
                 let text = self.frame_times.iter().map(|t| t.to_string() + "\n").collect::<String>();
                 edit.set_text(&text);
                 self.base_mut().add_child(&edit);
