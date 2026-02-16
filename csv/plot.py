@@ -13,7 +13,8 @@ def prettify_label(label):
         "cs": "C#",
         "gds": "GDScript",
         "graphicsgd": "GraphicsGD",
-        "rust": "Rust",
+        "rustbalanced": "Rust (Balanced)",
+        "rustdisengaged": "Rust (Disengaged)"
     }
     
     name = name_map.get(parts[0], parts[0].capitalize())
