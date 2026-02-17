@@ -35,11 +35,15 @@ Node2D_Class: Classes.Node2D_MethodBind_List
 Node_Class: Classes.Node_MethodBind_List
 
 
-last_delta:Toxin.float
+last_delta:Toxin.float //Each class is assigning their delta time to this, probably a better way. Might be affecting performance. It is the simple way.
 printonce:bool=true
+sprite_count::20000
+frame_count_amout::1000
+frame_times:[frame_count_amout]f64
+
 MainLoopFrameCallback :: proc "c" () {
     context = runtime.default_context()
-    if frame_current < 1000 {
+    if frame_current < frame_count_amout {
         frame_times[frame_current] = last_delta
         frame_current+=1
     } else if printonce {
@@ -49,35 +53,23 @@ MainLoopFrameCallback :: proc "c" () {
             total+=t
         }
         fmt.println(frame_times[:])
-        fmt.println(total/1000)
+        fmt.println(total/frame_count_amout)
     }
 }
 root:^Toxin.Object
 MainLoopStartupCallback :: proc "c" () {
     context = runtime.default_context()
-    /////////////////////////////////////////////////
-    //DO NOT USE THIS WITH OPTIMIZED CODE!!!!!
-    //Will take 5 minutes to compile because it loads all the init procs ._.
-    /////////////////////////////////////////////////
-    //Classes.INIT_ALL_OF_THEM()
+
     Classes.Sprite2D_Init_(&Texture_Class)
     Classes.Node2D_Init_(&Node2D_Class)
     Classes.Node_Init_(&Node_Class)
+    Classes.Window_Init_(&Window_MethodBind_List)
 
-    //indx_ret: Variant
-    //default_Array_class->GetIndex(0, &indx_ret)
-    //TODO: fix the singleton getters.
-    //GDW.getPhysServer2dObj()
-    //GDW.getRenderServer2dObj()
-    //GDW.class_get_method_list()
-    //GDW.getInputSingleton()
     //Setup an object to hold the MainLoop object.
     scene_tree_obj = GDW.getMainLoop()
-    //GDW.init_InputEvent()
     //Fetch the root of the current sceneTree
     root= GDW.getRoot()
     scene:= GDW.get_current_scene()
-    Classes.Window_Init_(&Window_MethodBind_List)
 
     //Create a class. Your extension registerations should all be done and all classes available at this point.
     //warning_player is a global object, not a multi-instance object. As such, there will be issues adding it to multiple sewage instances.
@@ -88,7 +80,7 @@ MainLoopStartupCallback :: proc "c" () {
     if scene != nil {
         //You can add a node directly to the root.
         //Add the class to the root of the sceneTree
-        for i in 0..<frame_count {
+        for i in 0..<sprite_count {
             root_node_instance = gdAPI.ClassDB.ConstructObject(&THIS_CLASS_NAME_deets.SN)
             GDW.addChild(root, &root_node_instance)
         }
