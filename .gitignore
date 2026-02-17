@@ -36,3 +36,8 @@ go.sum
 # Misc
 *.log
 .DS_Store
+
+# Swift
+!spritebench_swift/addons/swift_godot_extension/bin/
+spritebench_swift/addons/swift_godot_extension/bin/*
+!spritebench_swift/addons/swift_godot_extension/bin/.gdignore
