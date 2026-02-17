@@ -67,9 +67,10 @@ def main():
     # Calculate sort order based on mean FPS
     sort_order = plot_df.groupby("Implementation")["FPS"].mean().sort_values(ascending=False).index
     
+    sns.set_theme()
+    
     # Set the style
-    sns.set_theme(style="whitegrid")
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(12, 8))
     
     # Create the bar plot
     ax = sns.barplot(
@@ -78,14 +79,13 @@ def main():
         data=plot_df, 
         order=sort_order,
         hue="Implementation",
-        palette="viridis",
         legend=False,
         errorbar="sd",
         capsize=0.1
     )
     
     # Add labels to bars (showing the mean)
-    ax.bar_label(ax.containers[0], padding=5, fmt='%.1f')
+    ax.bar_label(ax.containers[0], padding=5, fmt='%.1f', fontweight='bold')
     
     plt.title("SpriteBench Performance Comparison (20,000 Sprites)", fontsize=16, pad=20)
     plt.xlabel("Average FPS (Higher is Better, Error Bars = SD)", fontsize=12)
