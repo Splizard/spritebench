@@ -15,7 +15,13 @@ On Ryzen 5800X, Ubuntu 25.10, Compatibility Renderer, Radeon 7900 GRE with radeo
 Execute
 ----------------
 
-Individual projects are in `spritebench_cs` (C#), `spritebench_gdscript` (GDScript), `spritebench_graphicsgd` (Go). To run them, export them in `release` mode.
+Individual projects are in:
+- `spritebench_cs`: Godot C#
+- `spritebench_gdscript`: Godot GDScript
+- `spritebench_graphicsgd`: [GraphicsGD](https://github.com/quaadgras/graphics.gd) (Go)
+- `spritebench_rust`: [godot-rust](https://github.com/godot-rust/gdext) (Rust)
+
+To run them, build the respective extension (for GraphicsGD, Rust) and export them in `release` mode.
 
 By default, 20_000 sprites will be spawned. The app runs for 100 frames, then records the frametimes for 1_000 frames. Afterwards, a text area is shown that contains the frametimes, which can be copied and pasted to a csv file. It is implemented this way so that it is easy to extract the values when running the web build.
 
