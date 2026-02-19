@@ -19,11 +19,15 @@ def prettify_label(label):
     
     name = name_map.get(parts[0], parts[0].capitalize())
     
+    # Determine the variant
     if "html5" in parts:
-        return f"{name} (HTML5)"
-    if "forwardplus" in parts:
-        return f"{name} (Forward+)"
-    return name
+        variant = "HTML5"
+    elif "forwardplus" in parts:
+        variant = "Forward+"
+    else:
+        variant = "Compatibility"
+    
+    return name, variant
 
 def main():
     # Use absolute path for safety
@@ -40,7 +44,7 @@ def main():
             continue
 
         label = file_name.replace(".csv", "")
-        pretty_label = prettify_label(label)
+        name, variant = prettify_label(label)
         
         try:
             # The CSVs have no header and one column of frame times
@@ -52,7 +56,7 @@ def main():
             if not df.empty:
                 fps_values = 1.0 / df[0]
                 for fps in fps_values:
-                    data.append({"Implementation": pretty_label, "FPS": fps})
+                    data.append({"Implementation": name, "Variant": variant, "FPS": fps})
             else:
                 print(f"Warning: No valid frame times in {file_name}")
         except Exception as e:
@@ -64,32 +68,38 @@ def main():
 
     plot_df = pd.DataFrame(data)
     
-    # Calculate sort order based on mean FPS
-    sort_order = plot_df.groupby("Implementation")["FPS"].mean().sort_values(ascending=False).index
+    # Calculate sort order based on mean FPS for Compatibility renderer only
+    compat_df = plot_df[plot_df["Variant"] == "Compatibility"]
+    sort_order = compat_df.groupby("Implementation")["FPS"].mean().sort_values(ascending=False).index
+    
+    # Define variant order
+    variant_order = ["Compatibility", "Forward+", "HTML5"]
     
     sns.set_theme()
     
     # Set the style
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(10, 5.6))
     
-    # Create the bar plot
+    # Create the grouped bar plot
     ax = sns.barplot(
-        x="FPS", 
-        y="Implementation", 
+        x="Implementation", 
+        y="FPS", 
+        hue="Variant",
         data=plot_df, 
         order=sort_order,
-        hue="Implementation",
-        legend=False,
+        hue_order=variant_order,
         errorbar="sd",
         capsize=0.1
     )
     
     # Add labels to bars (showing the mean)
-    ax.bar_label(ax.containers[0], padding=5, fmt='%.1f', fontweight='bold')
+    for container in ax.containers:
+        ax.bar_label(container, padding=5, fmt='%.1f', fontweight='bold', fontsize=8, label_type="center")
     
     plt.title("SpriteBench Performance Comparison (20,000 Sprites)", fontsize=16, pad=20)
-    plt.xlabel("Average FPS (Higher is Better, Error Bars = SD)", fontsize=12)
-    plt.ylabel("Implementation", fontsize=12)
+    plt.xlabel("Implementation", fontsize=12)
+    plt.ylabel("Average FPS (Higher is Better, Error Bars = SD)", fontsize=12)
+    plt.legend(title="Renderer", loc="upper right")
     
     # Adjust layout and save
     plt.tight_layout()

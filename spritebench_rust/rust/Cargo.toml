@@ -12,11 +12,12 @@ disengaged = ["godot/safeguards-release-disengaged"]
 
 [dependencies]
 rand = "0.10.0"
+godot = "0.4.5"
 
-[dependencies.godot]
-git = "https://github.com/godot-rust/gdext"
-branch = "master"
-features = ["api-custom", "experimental-wasm", "lazy-function-tables"]
+#[dependencies.godot]
+#git = "https://github.com/godot-rust/gdext"
+#branch = "master"
+#features = ["api-custom", "experimental-wasm", "lazy-function-tables"]
 
 [profile.dev]
 opt-level = 0
