@@ -2,7 +2,7 @@ module de.timklge.spritebench
 
 go 1.26.0
 
-require graphics.gd v0.0.0-20260221041443-94cfab3dcfba
+require graphics.gd v0.0.0-20260221045651-1d3193c8823a
 
 require (
 	github.com/tetratelabs/wazero v1.8.2 // indirect
