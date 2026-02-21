@@ -98,7 +98,7 @@ def main():
         ax.bar_label(container, padding=5, fmt='%.1f', fontweight='bold', fontsize=8, label_type="center")
     
     plt.title("SpriteBench Performance Comparison (20,000 Sprites)", fontsize=16, pad=20)
-    plt.xlabel("Implementation", fontsize=12)
+    plt.xlabel("")
     plt.ylabel("Average FPS (Higher is Better, Error Bars = SD)", fontsize=12)
     plt.legend(title="Renderer", loc="upper right")
     
