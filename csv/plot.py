@@ -12,7 +12,7 @@ def prettify_label(label):
     name_map = {
         "cs": "C#",
         "gds": "GDScript",
-        "graphicsgd": "GraphicsGD",
+        "graphicsgd": "Go",
         "rustbalanced": "Rust (Balanced)",
         "rustdisengaged": "Rust (Disengaged)"
     }
@@ -82,7 +82,7 @@ def main():
     
     # Create the grouped bar plot
     ax = sns.barplot(
-        x="Implementation", 
+        x="Implementation",
         y="FPS", 
         hue="Variant",
         data=plot_df, 
