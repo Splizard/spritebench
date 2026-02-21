@@ -20,6 +20,7 @@ Individual projects are in:
 - `spritebench_gdscript`: Godot GDScript
 - `spritebench_go`: [graphics.gd](https://github.com/quaadgras/graphics.gd) (Go)
 - `spritebench_rust`: [godot-rust](https://github.com/godot-rust/gdext) (Rust)
+- `spritebench_swift`: [SwiftGodot](https://github.com/migueldeicaza/SwiftGodot) (Swift)
 
 To run them, build the respective extension (for GraphicsGD, Rust) and export them in `release` mode.
 

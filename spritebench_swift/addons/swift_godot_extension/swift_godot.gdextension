@@ -1,0 +1,19 @@
+[configuration]
+entry_symbol = "swift_entry_point"
+compatibility_minimum = 4.6
+
+[libraries]
+macos.debug = "res://addons/swift_godot_extension/bin/arm64-apple-macosx/debug/libSpriteBenchSwift.dylib"
+macos.release = "res://addons/swift_godot_extension/bin/arm64-apple-macosx/release/libSpriteBenchSwift.dylib"
+linux.debug.x86_64 = "res://addons/swift_godot_extension/bin/x86_64-unknown-linux-gnu/debug/libSpriteBenchSwift.so"
+linux.release.x86_64 = "res://addons/swift_godot_extension/bin/x86_64-unknown-linux-gnu/release/libSpriteBenchSwift.so"
+windows.debug.x86_64 = "res://addons/swift_godot_extension/bin/x86_64-unknown-windows-msvc/debug/SpriteBenchSwift.dll"
+windows.release.x86_64 = "res://addons/swift_godot_extension/bin/x86_64-unknown-windows-msvc/release/SpriteBenchSwift.dll"
+
+[dependencies]
+macos.debug = {"res://addons/swift_godot_extension/bin/arm64-apple-macosx/debug/libSwiftGodot.dylib": ""}
+macos.release = {"res://addons/swift_godot_extension/bin/arm64-apple-macosx/release/libSwiftGodot.dylib": ""}
+linux.debug.x86_64 = {"res://addons/swift_godot_extension/bin/x86_64-unknown-linux-gnu/debug/libSwiftGodot.so": ""}
+linux.release.x86_64 = {"res://addons/swift_godot_extension/bin/x86_64-unknown-linux-gnu/release/libSwiftGodot.so": ""}
+windows.debug.x86_64 = {"res://addons/swift_godot_extension/bin/x86_64-unknown-windows-msvc/debug/SwiftGodot.dll": ""}
+windows.release.x86_64 = {"res://addons/swift_godot_extension/bin/x86_64-unknown-windows-msvc/release/SwiftGodot.dll": ""}

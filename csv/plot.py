@@ -14,7 +14,8 @@ def prettify_label(label):
         "gds": "GDScript",
         "graphicsgd": "Go",
         "rustbalanced": "Rust (Balanced)",
-        "rustdisengaged": "Rust (Disengaged)"
+        "rustdisengaged": "Rust (Disengaged)",
+        "swift": "Swift",
     }
     
     name = name_map.get(parts[0], parts[0].capitalize())
