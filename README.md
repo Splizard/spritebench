@@ -18,7 +18,7 @@ Execute
 Individual projects are in:
 - `spritebench_cs`: Godot C#
 - `spritebench_gdscript`: Godot GDScript
-- `spritebench_graphicsgd`: [GraphicsGD](https://github.com/quaadgras/graphics.gd) (Go)
+- `spritebench_go`: [graphics.gd](https://github.com/quaadgras/graphics.gd) (Go)
 - `spritebench_rust`: [godot-rust](https://github.com/godot-rust/gdext) (Rust)
 
 To run them, build the respective extension (for GraphicsGD, Rust) and export them in `release` mode.
