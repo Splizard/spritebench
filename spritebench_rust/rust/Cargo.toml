@@ -6,12 +6,18 @@ edition = "2024"
 [lib]
 crate-type = ["cdylib"]
 
-[dependencies]
-# For balanced profile:
-# godot = "0.4.5"
+[features]
+default = []
+disengaged = ["godot/safeguards-release-disengaged"]
 
-# For disengaged profile (without memory safeguards)
-godot = { version = "0.4.5", features = ["safeguards-release-disengaged"] }
+[dependencies]
+rand = "0.10.0"
+godot = "0.4.5"
+
+#[dependencies.godot]
+#git = "https://github.com/godot-rust/gdext"
+#branch = "master"
+#features = ["api-custom", "experimental-wasm", "lazy-function-tables"]
 
 [profile.dev]
 opt-level = 0
