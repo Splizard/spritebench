@@ -3,9 +3,11 @@ package main
 import "shared:Toxin"
 import Classes "shared:Godot_Odin_Binds/GD_Classes"
 import GDW "shared:GDWrapper"
+import GDE "shared:GDWrapper/gdAPI/gdextension"
 import "shared:GDWrapper/gdAPI"
 import "core:fmt"
 import "base:runtime"
+import "core:math"
 
 init:: proc ()  {
     Toxin.scene_inits[0] = &THIS_CLASS_NAME_deets
@@ -22,7 +24,6 @@ init:: proc ()  {
 @(init)
 asdf :: proc "contextless" () {
     Toxin.inits.scene = init
-    Toxin.scene_inits[0] = &THIS_CLASS_NAME_deets
 }
 
 scene_tree_obj: ^GDW.Object
@@ -35,26 +36,44 @@ Node2D_Class: Classes.Node2D_MethodBind_List
 Node_Class: Classes.Node_MethodBind_List
 
 
-last_delta:Toxin.float //Each class is assigning their delta time to this, probably a better way. Might be affecting performance. It is the simple way.
 printonce:bool=true
 sprite_count::20000
-frame_count_amout::1000
+frame_count_amout::3000
 frame_times:[frame_count_amout]f64
+frame_current:int=0
+
+class_list:[dynamic]^Toxin.Class_Container(THIS_CLASS_NAME)
 
 MainLoopFrameCallback :: proc "c" () {
     context = runtime.default_context()
+    perf:Toxin.float=0
+    Node_Class.get_process_delta_time->m_call(root, r_ret = &perf)
+
     if frame_current < frame_count_amout {
-        frame_times[frame_current] = last_delta
+        frame_times[frame_current] = perf
         frame_current+=1
     } else if printonce {
         printonce = false
         total:f64
-        for t in frame_times[:] {
-            total+=t
-        }
+
+        for t in frame_times[:] do total+=t
+
         fmt.println(frame_times[:])
         fmt.println(total/frame_count_amout)
     }
+
+    //IF you want to compare the scenetree's _process callback vs storing the Sprite2D yourself you can uncomment this and comment the _process out.
+    /*
+    is_centered:Toxin.Bool=true
+    for class in class_list {
+        //fmt.println(class)
+        class.class.position.x+=math.cos_f32(f32(class.class.angle))*f32(perf)*f32(class.class.speed)
+        class.class.position.y+=math.sin_f32(f32(class.class.angle))*f32(perf)*f32(class.class.speed)
+        Node2D_Class.set_position->m_call(class.self, {&class.class.position})
+        if class.class.position.x > class.class.window.x - class.class.size.x || class.class.position.x < class.class.size.x do class.class.angle = math.PI - class.class.angle
+        if class.position.y > class.window.y - class.size.y || class.position.y < class.size.y do class.angle = -class.angle
+        //Texture_Class.is_centered->m_call(class.self, r_ret= &is_centered)
+    }*/
 }
 root:^Toxin.Object
 MainLoopStartupCallback :: proc "c" () {
@@ -65,7 +84,7 @@ MainLoopStartupCallback :: proc "c" () {
     Classes.Node_Init_(&Node_Class)
     Classes.Window_Init_(&Window_MethodBind_List)
 
-    //Setup an object to hold the MainLoop object.
+    //Hold the MainLoop object.
     scene_tree_obj = GDW.getMainLoop()
     //Fetch the root of the current sceneTree
     root= GDW.getRoot()

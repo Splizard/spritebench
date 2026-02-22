@@ -14,7 +14,6 @@ Entry, Class Exporter, etc
 import "shared:Toxin"
 [text](https://github.com/Ferinzz/Toxin/tree/testing_new_hierarchy/src/Toxin)
 
-The current version is written based on an in-progress branch.
 Package imports are expected to be in Odin's shared folder.
 
 Benchmarks were performed by running the following commands to export to a project called TopDown found in the root of build location.
