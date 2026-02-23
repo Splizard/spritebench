@@ -23,11 +23,13 @@ THIS_CLASS_NAME :: struct {
     size: Toxin.Vector2,
 }
 
+
 windowSize:Toxin.Vector2i
 Window_MethodBind_List: Classes.Window_MethodBind_List
 wind_obj:^Toxin.Object
 window:Toxin.Vector2 = {1150, 750}
 size:Toxin.Vector2={64,64}
+
 
 self_reggy:: proc(self: ^Toxin.Registerer, init_level: Toxin.InitializationLevel) {
     me:=(^Toxin.Class_Deets)(self)
@@ -49,7 +51,6 @@ THIS_CLASS_NAME_deets: Toxin.Class_Deets = {
 }
 
 //If there's nothing that is heap allocated, you can use Toxin.Class_Init instead.
-//This runs before any virtuals.
 THIS_CLASS_NAME_Init :: proc "c" (p_class_user_data: ^Toxin.Class_Deets, p_notify_postinitialize: Toxin.Bool) -> (^Toxin.Object) {
     context = runtime.default_context()
     class:= cast(^Toxin.Class_Container(THIS_CLASS_NAME))Toxin.Create(p_class_user_data, p_notify_postinitialize)
@@ -59,7 +60,6 @@ THIS_CLASS_NAME_Init :: proc "c" (p_class_user_data: ^Toxin.Class_Deets, p_notif
     class.class.window = {rand.float32_range(window.x-64, window.x), rand.float32_range(window.y-64, window.y)}
     class.class.position = {rand.float32_range(64,class.class.window.x-64), rand.float32_range(64,class.class.window.y-64)}
     class.class.size = {rand.float32_range(0,32), rand.float32_range(0,32)}
-    append_elem(&class_list, class)
     //fmt.println("ïnit")
     return class.self
 }
