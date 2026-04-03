@@ -21,6 +21,7 @@ Individual projects are in:
 - `spritebench_go`: [graphics.gd](https://github.com/quaadgras/graphics.gd) (Go)
 - `spritebench_rust`: [godot-rust](https://github.com/godot-rust/gdext) (Rust)
 - `spritebench_swift`: [SwiftGodot](https://github.com/migueldeicaza/SwiftGodot) (Swift)
+- `spritebench_Odin`: [Toxin](https://github.com/Ferinzz/Toxin) (Odin)
 
 To run them, build the respective extension (for graphics.gd, Rust, SwiftGodot) and export them in `release` mode.
 
