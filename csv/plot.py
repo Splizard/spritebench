@@ -16,6 +16,7 @@ def prettify_label(label):
         "rustbalanced": "Rust (Balanced)",
         "rustdisengaged": "Rust (Disengaged)",
         "swift": "Swift",
+        "odin": "Odin",
     }
     
     name = name_map.get(parts[0], parts[0].capitalize())

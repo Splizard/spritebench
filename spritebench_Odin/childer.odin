@@ -25,7 +25,7 @@ THIS_CLASS_NAME :: struct {
 windowSize:Toxin.Vector2i
 Window_MethodBind_List: Classes.Window_MethodBind_List
 wind_obj:^Toxin.Object
-window:Toxin.Vector2 = {1150, 750}
+window:Toxin.Vector2 = {1920, 1080}
 size:Toxin.Vector2={64,64}
 
 
