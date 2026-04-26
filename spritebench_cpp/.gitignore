@@ -1,0 +1,40 @@
+# Godot auto generated files
+*.gen.*
+.godot/
+
+# Ignore library files
+**/bin/
+
+# Ignore scons cache
+custom.py
+bullet-cpp/__pycache__/
+.sconsign.dblite
+
+# Ignore generated compile_commands.json
+compile_commands.json
+
+# Ignore files generated for documentation
+**/gen/
+
+# Binaries
+*.o
+*.os
+*.so
+*.obj
+*.bc
+*.pyc
+*.dblite
+*.pdb
+*.lib
+*.config
+*.creator
+*.creator.user
+*.files
+*.includes
+*.idb
+*.exp
+
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
