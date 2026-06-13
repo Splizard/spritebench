@@ -24,8 +24,8 @@ Individual projects are in:
 - `spritebench_swift`: [SwiftGodot](https://github.com/migueldeicaza/SwiftGodot) (Swift)
 - `spritebench_Odin`: [Toxin](https://github.com/Ferinzz/Toxin) (Odin)
 
-To run them, build the respective extension (for graphics.gd, Rust, SwiftGodot) and export them in `release` mode.
+To run them, build the respective extension (for Go, Rust, Swift, C++, Odin) and export them in `release` mode.
 
 By default, 20_000 sprites will be spawned. The app runs for 100 frames, then records the frametimes for 1_000 frames. Afterwards, a text area is shown that contains the frametimes, which can be copied and pasted to a csv file. It is implemented this way so that it is easy to extract the values when running the web build.
 
-Note that VSync is disabled in the projects, but is enforced by most web browsers.
+Note that VSync is disabled in the projects, but is enforced by most web browsers. In Firefox, you can disable it in `about:config` by setting `layout.frame_rate=0` (restart required).
