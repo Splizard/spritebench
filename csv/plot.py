@@ -17,6 +17,7 @@ def prettify_label(label):
         "rustdisengaged": "Rust (Disengaged)",
         "swift": "Swift",
         "odin": "Odin",
+        "cpp": "C++"
     }
     
     name = name_map.get(parts[0], parts[0].capitalize())
@@ -94,9 +95,21 @@ def main():
         capsize=0.1
     )
     
-    # Add labels to bars (showing the mean)
+    # Add labels to bars (showing the mean). Rotate them 90° so they fit
+    # inside the narrow bars without overlapping with adjacent bars.
     for container in ax.containers:
-        ax.bar_label(container, padding=5, fmt='%.1f', fontweight='bold', fontsize=8, label_type="center")
+        labels = ax.bar_label(
+            container,
+            padding=2,
+            fmt='%.1f',
+            fontweight='bold',
+            fontsize=8,
+            label_type="center",
+        )
+        for label in labels:
+            label.set_rotation(90)
+            label.set_ha("center")
+            label.set_va("center")
     
     plt.title("SpriteBench Performance Comparison (20,000 Sprites)", fontsize=16, pad=20)
     plt.xlabel("")

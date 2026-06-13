@@ -8,4 +8,4 @@ https://docs.godotengine.org/en/stable/engine_details/development/compiling/inde
 
 # Build
 -----
-Run `scon target=template_release` for benchmark testing.
+Run `scons target=template_release` for benchmark testing.
