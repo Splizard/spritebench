@@ -43,3 +43,12 @@ spritebench_swift/addons/swift_godot_extension/bin/*
 !spritebench_swift/addons/swift_godot_extension/bin/.gdignore
 
 build
+# Benchmark automation artifacts
+bench/results/
+spritebench_gdscript/releases/
+spritebench_go/go.work
+spritebench_go/go.work.sum
+spritebench_go/graphics/musl_amd64.editor
+
+# Machine-specific benchmark config
+bench/.env

@@ -6,6 +6,7 @@ let package = Package(
     name: "SpriteBenchSwift",
     platforms: [
         .macOS(.v14),
+        .iOS(.v17),
     ],
     products: [
         .library(

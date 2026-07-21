@@ -3,16 +3,18 @@ entry_symbol = "swift_entry_point"
 compatibility_minimum = 4.6
 
 [libraries]
-macos.debug = "res://addons/swift_godot_extension/bin/arm64-apple-macosx/debug/libSpriteBenchSwift.dylib"
+macos.debug = "res://addons/swift_godot_extension/bin/arm64-apple-macosx/release/libSpriteBenchSwift.dylib"
 macos.release = "res://addons/swift_godot_extension/bin/arm64-apple-macosx/release/libSpriteBenchSwift.dylib"
+ios.arm64 = "res://addons/swift_godot_extension/bin/arm64-apple-ios/release/libSpriteBenchSwift.dylib"
 linux.debug.x86_64 = "res://addons/swift_godot_extension/bin/x86_64-unknown-linux-gnu/debug/libSpriteBenchSwift.so"
 linux.release.x86_64 = "res://addons/swift_godot_extension/bin/x86_64-unknown-linux-gnu/release/libSpriteBenchSwift.so"
 windows.debug.x86_64 = "res://addons/swift_godot_extension/bin/x86_64-unknown-windows-msvc/debug/SpriteBenchSwift.dll"
 windows.release.x86_64 = "res://addons/swift_godot_extension/bin/x86_64-unknown-windows-msvc/release/SpriteBenchSwift.dll"
 
 [dependencies]
-macos.debug = {"res://addons/swift_godot_extension/bin/arm64-apple-macosx/debug/libSwiftGodot.dylib": ""}
-macos.release = {"res://addons/swift_godot_extension/bin/arm64-apple-macosx/release/libSwiftGodot.dylib": ""}
+macos.debug = {"res://addons/swift_godot_extension/bin/arm64-apple-macosx/release/SwiftGodot.framework": "", "res://addons/swift_godot_extension/bin/arm64-apple-macosx/release/SwiftGodotRuntime.framework": ""}
+macos.release = {"res://addons/swift_godot_extension/bin/arm64-apple-macosx/release/SwiftGodot.framework": "", "res://addons/swift_godot_extension/bin/arm64-apple-macosx/release/SwiftGodotRuntime.framework": ""}
+ios.arm64 = {"res://addons/swift_godot_extension/bin/arm64-apple-ios/release/SwiftGodot.framework": "", "res://addons/swift_godot_extension/bin/arm64-apple-ios/release/SwiftGodotRuntime.framework": ""}
 linux.debug.x86_64 = {"res://addons/swift_godot_extension/bin/x86_64-unknown-linux-gnu/debug/libSwiftGodot.so": ""}
 linux.release.x86_64 = {"res://addons/swift_godot_extension/bin/x86_64-unknown-linux-gnu/release/libSwiftGodot.so": ""}
 windows.debug.x86_64 = {"res://addons/swift_godot_extension/bin/x86_64-unknown-windows-msvc/debug/SwiftGodot.dll": ""}

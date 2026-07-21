@@ -10,6 +10,8 @@ config_version=5
 
 [application]
 
+run/low_processor_mode_sleep_usec=0
+
 config/name="spritebench_graphicsgd"
 run/main_scene="res://main.tscn"
 run/main_loop_type="GoMainLoop"
@@ -27,3 +29,7 @@ window/vsync/vsync_mode=0
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
+
+[debug]
+
+file_logging/enable_file_logging=false

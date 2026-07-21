@@ -10,6 +10,8 @@ config_version=5
 
 [application]
 
+run/low_processor_mode_sleep_usec=0
+
 config/name="spritebench"
 run/main_scene="uid://dq641qs1ag5e5"
 config/features=PackedStringArray("4.6", "GL Compatibility")
@@ -28,6 +30,12 @@ window/vsync/vsync_mode=0
 
 [rendering]
 
+textures/vram_compression/import_etc2_astc=true
+
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+
+[debug]
+
+file_logging/enable_file_logging=false

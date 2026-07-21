@@ -1,0 +1,232 @@
+FROM docker.io/library/ubuntu:24.04
+
+# Toolchain versions. Bump these to test newer toolchains.
+ARG GODOT_VERSION=4.6-stable
+# Newer Godot used by the graphics.gd (Go) benchmark, which tracks upstream.
+ARG GODOT_NEXT_VERSION=4.7-stable
+# Must be >= the `go` directive in spritebench_go/go.mod and graphics.gd/go.mod.
+# If the base Go is older, `go` auto-downloads the required toolchain into
+# GOMODCACHE, which then becomes GOROOT and breaks the musl runtime overlay
+# ("Files beneath GOMODCACHE must not be replaced").
+ARG GO_VERSION=1.26.1
+ARG SWIFT_VERSION=6.3.2
+ARG ODIN_VERSION=dev-2026-07a
+ARG DOTNET_CHANNEL=10.0
+# Emscripten used for the C++/Rust web builds. For GDExtension web builds this
+# should ideally match the version the Godot web templates were built with.
+ARG EMSDK_VERSION=latest
+# Pinned commits from spritebench_Odin/readme.md
+ARG TOXIN_COMMIT=9b4652e
+ARG GD_CLASSES_COMMIT=958d411
+# The commit the spritebench_cpp/godot-cpp submodule pins (master targets the
+# next Godot dev version and will not load in the 4.6 editor).
+ARG GODOT_CPP_COMMIT=60b5a4196de8442b43b32ba68ebe1e79cfcb762f
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Base packages: build tools, Godot/Chromium runtime libraries, Swift runtime
+# dependencies, plotting stack.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl git unzip zip xz-utils rsync \
+    build-essential pkg-config scons clang binutils gnupg2 \
+    python3 python3-pandas python3-seaborn python3-matplotlib \
+    libgl1 libglx-mesa0 \
+    libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6 libxkbcommon0 libxext6 libxrender1 \
+    libasound2t64 libpulse0 libfontconfig1 fontconfig \
+    libnss3 libnspr4 libexpat1 libdrm2 libgbm1 libxcomposite1 libxdamage1 libxfixes3 libcups2t64 \
+    libc6-dev libcurl4-openssl-dev libedit2 libgcc-13-dev libsqlite3-0 \
+    libstdc++-13-dev libxml2-dev libncurses-dev libz3-dev tzdata zlib1g-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+# Godot editor (regular + mono) --------------------------------------------
+RUN mkdir -p /opt/godot && cd /tmp \
+ && curl -fsSLo godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip" \
+ && unzip -q godot.zip -d /opt/godot \
+ && ln -s "/opt/godot/Godot_v${GODOT_VERSION}_linux.x86_64" /usr/local/bin/godot \
+ && curl -fsSLo godot-mono.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_mono_linux_x86_64.zip" \
+ && unzip -q godot-mono.zip -d /opt/godot \
+ && ln -s "/opt/godot/Godot_v${GODOT_VERSION}_mono_linux_x86_64/Godot_v${GODOT_VERSION}_mono_linux.x86_64" /usr/local/bin/godot-mono \
+ && rm godot.zip godot-mono.zip
+
+# Linux + Web export templates (regular) and Linux templates (mono). Only what
+# the benchmark needs is extracted from the .tpz archives to keep the image
+# smaller.
+RUN set -eux; \
+    TVER="$(echo "${GODOT_VERSION}" | tr - .)"; \
+    mkdir -p "/root/.local/share/godot/export_templates/${TVER}" "/root/.local/share/godot/export_templates/${TVER}.mono"; \
+    cd /tmp; \
+    curl -fsSLo t.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"; \
+    unzip -q -j t.tpz 'templates/linux_debug.x86_64' 'templates/linux_release.x86_64' 'templates/web_*' \
+        -d "/root/.local/share/godot/export_templates/${TVER}"; \
+    rm t.tpz; \
+    curl -fsSLo tm.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_mono_export_templates.tpz"; \
+    unzip -q -j tm.tpz 'templates/linux_debug.x86_64' 'templates/linux_release.x86_64' \
+        'templates/android_debug.apk' 'templates/android_release.apk' \
+        -d "/root/.local/share/godot/export_templates/${TVER}.mono"; \
+    rm tm.tpz
+
+# Godot editor + Linux templates for GODOT_NEXT_VERSION (used by the Go
+# benchmark; graphics.gd tracks upstream Godot) -----------------------------
+RUN set -eux; cd /tmp; \
+    curl -fsSLo godot-next.zip "https://github.com/godotengine/godot/releases/download/${GODOT_NEXT_VERSION}/Godot_v${GODOT_NEXT_VERSION}_linux.x86_64.zip"; \
+    unzip -q godot-next.zip -d /opt/godot; \
+    ln -s "/opt/godot/Godot_v${GODOT_NEXT_VERSION}_linux.x86_64" /usr/local/bin/godot-next; \
+    rm godot-next.zip; \
+    TVER="$(echo "${GODOT_NEXT_VERSION}" | tr - .)"; \
+    mkdir -p "/root/.local/share/godot/export_templates/${TVER}"; \
+    curl -fsSLo tn.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_NEXT_VERSION}/Godot_v${GODOT_NEXT_VERSION}_export_templates.tpz"; \
+    unzip -q -j tn.tpz 'templates/linux_debug.x86_64' 'templates/linux_release.x86_64' \
+        -d "/root/.local/share/godot/export_templates/${TVER}"; \
+    rm tn.tpz; \
+    mkdir -p /opt/godot-next-path; \
+    ln -s /usr/local/bin/godot-next /opt/godot-next-path/godot
+
+# Chromium headless shell (for the web benchmarks) --------------------------
+RUN set -eux; \
+    url="$(curl -fsSL https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
+        | python3 -c "import json,sys; d=json.load(sys.stdin); print([x['url'] for x in d['channels']['Stable']['downloads']['chrome-headless-shell'] if x['platform']=='linux64'][0])")"; \
+    curl -fsSLo /tmp/chs.zip "$url"; \
+    unzip -q /tmp/chs.zip -d /opt; \
+    mv /opt/chrome-headless-shell-linux64 /opt/chrome-headless-shell; \
+    ln -s /opt/chrome-headless-shell/chrome-headless-shell /usr/local/bin/chrome-headless-shell; \
+    rm /tmp/chs.zip
+
+# Go ------------------------------------------------------------------------
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
+ENV PATH=/usr/local/go/bin:$PATH
+
+# Rust (stable for native, nightly + emscripten target for web) -------------
+ENV RUSTUP_HOME=/opt/rustup
+RUN CARGO_HOME=/opt/cargo bash -c 'curl -fsSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable' \
+ && CARGO_HOME=/opt/cargo /opt/cargo/bin/rustup toolchain install nightly --profile minimal --component rust-src \
+ && CARGO_HOME=/opt/cargo /opt/cargo/bin/rustup target add wasm32-unknown-emscripten --toolchain nightly
+ENV PATH=/opt/cargo/bin:$PATH
+
+# .NET ----------------------------------------------------------------------
+RUN curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "${DOTNET_CHANNEL}" --install-dir /opt/dotnet
+ENV DOTNET_ROOT=/opt/dotnet \
+    PATH=/opt/dotnet:$PATH \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_NOLOGO=1
+
+# Swift ---------------------------------------------------------------------
+RUN curl -fsSL "https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04.tar.gz" \
+      | tar -xz -C /opt \
+ && mv "/opt/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04" /opt/swift
+ENV PATH=/opt/swift/usr/bin:$PATH
+
+# Odin + Toxin/GDWrapper/Godot_Odin_Binds bindings --------------------------
+RUN set -eux; cd /tmp; \
+    curl -fsSLo odin.tar.gz "https://github.com/odin-lang/Odin/releases/download/${ODIN_VERSION}/odin-linux-amd64-${ODIN_VERSION}.tar.gz"; \
+    mkdir odin-extract; tar -xzf odin.tar.gz -C odin-extract; \
+    ODIN_DIR="$(dirname "$(find /tmp/odin-extract -maxdepth 3 -name odin -type f | head -1)")"; \
+    mv "$ODIN_DIR" /opt/odin; \
+    chmod +x /opt/odin/odin; \
+    ln -s /opt/odin/odin /usr/local/bin/odin; \
+    rm -rf /tmp/odin.tar.gz /tmp/odin-extract
+ENV ODIN_ROOT=/opt/odin
+RUN set -x; mkdir -p /opt/odin/shared && cd /tmp \
+ && git clone https://github.com/Ferinzz/Toxin.git \
+ && git -C Toxin checkout "${TOXIN_COMMIT}" \
+ && git clone https://github.com/Ferinzz/Godot_Odin_Binds.git \
+ && git -C Godot_Odin_Binds checkout "${GD_CLASSES_COMMIT}" \
+ && cp -r Toxin/Toxin Toxin/GDWrapper /opt/odin/shared/ \
+ && cp -r Godot_Odin_Binds /opt/odin/shared/Godot_Odin_Binds \
+ && rm -rf /tmp/Toxin /tmp/Godot_Odin_Binds \
+ || echo "WARNING: Odin bindings setup failed; the odin benchmark will fail (all others unaffected)"
+
+# Emscripten (C++/Rust web builds) ------------------------------------------
+RUN git clone --depth=1 https://github.com/emscripten-core/emsdk /opt/emsdk \
+ && /opt/emsdk/emsdk install "${EMSDK_VERSION}" \
+ && /opt/emsdk/emsdk activate "${EMSDK_VERSION}" \
+ || echo "WARNING: emsdk setup failed; C++/Rust web benchmarks will fail (all others unaffected)"
+
+# godot-cpp (cached clone, copied into the work tree at bench time) ---------
+RUN git init -q /opt/cache/godot-cpp \
+ && git -C /opt/cache/godot-cpp remote add origin https://github.com/godotengine/godot-cpp \
+ && git -C /opt/cache/godot-cpp fetch -q --depth=1 origin "${GODOT_CPP_COMMIT}" \
+ && git -C /opt/cache/godot-cpp checkout -q FETCH_HEAD
+
+# Android SDK/NDK + JDK (android benchmark builds; the device itself is
+# driven from the host by run-android.sh, the container only builds APKs) ---
+ARG ANDROID_PLATFORM=34
+ARG ANDROID_BUILD_TOOLS=34.0.0
+# r23 LTS: much smaller than r26+, still supported by godot-cpp/rust/go.
+ARG ANDROID_NDK_VERSION=23.2.8568313
+ARG ANDROID_CMDLINE_TOOLS=11076708
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION
+RUN set -eux; \
+    apt-get update && apt-get install -y --no-install-recommends openjdk-17-jdk-headless \
+ && rm -rf /var/lib/apt/lists/*; \
+    mkdir -p "$ANDROID_HOME/cmdline-tools"; \
+    curl -fsSLo /tmp/ct.zip "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_CMDLINE_TOOLS}_latest.zip"; \
+    unzip -q /tmp/ct.zip -d "$ANDROID_HOME/cmdline-tools"; \
+    mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"; \
+    rm /tmp/ct.zip; \
+    yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null; \
+    "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+        "platform-tools" "build-tools;${ANDROID_BUILD_TOOLS}" \
+        "platforms;android-${ANDROID_PLATFORM}" "ndk;${ANDROID_NDK_VERSION}" >/dev/null \
+ || echo "WARNING: android sdk setup failed; android benchmarks will fail (others unaffected)"
+
+# Android export templates, debug keystore, and the editor settings Godot
+# needs to sign APK exports headlessly.
+RUN set -eux; \
+    for V in "${GODOT_VERSION}" "${GODOT_NEXT_VERSION}"; do \
+        TVER="$(echo "$V" | tr - .)"; \
+        mkdir -p "/root/.local/share/godot/export_templates/${TVER}"; \
+        curl -fsSLo /tmp/t.tpz "https://github.com/godotengine/godot/releases/download/${V}/Godot_v${V}_export_templates.tpz"; \
+        unzip -q -j -o /tmp/t.tpz templates/android_debug.apk templates/android_release.apk \
+            -d "/root/.local/share/godot/export_templates/${TVER}"; \
+        rm /tmp/t.tpz; \
+    done; \
+    keytool -genkeypair -keystore /opt/android-sdk/debug.keystore \
+        -storepass android -keypass android -alias androiddebugkey \
+        -keyalg RSA -keysize 2048 -validity 10000 \
+        -dname "CN=Android Debug,O=Android,C=US"; \
+    mkdir -p /root/.config/godot; \
+    for E in 4.6 4.7; do \
+        printf '%s\n' \
+            '[gd_resource type="EditorSettings" format=3]' \
+            '' \
+            '[resource]' \
+            'export/android/android_sdk_path = "/opt/android-sdk"' \
+            'export/android/java_sdk_path = "/usr/lib/jvm/java-17-openjdk-amd64"' \
+            'export/android/debug_keystore = "/opt/android-sdk/debug.keystore"' \
+            'export/android/debug_keystore_user = "androiddebugkey"' \
+            'export/android/debug_keystore_pass = "android"' \
+            > "/root/.config/godot/editor_settings-$E.tres"; \
+    done
+
+# Rust android target (native lib for the rust APK) -------------------------
+RUN CARGO_HOME=/opt/cargo /opt/cargo/bin/rustup target add aarch64-linux-android \
+ || echo "WARNING: rust android target install failed"
+
+# Sign release APK exports with the debug keystore (benchmark builds are
+# side-loaded via adb, not published). Godot reads these env overrides.
+ENV GODOT_ANDROID_KEYSTORE_RELEASE_PATH=/opt/android-sdk/debug.keystore \
+    GODOT_ANDROID_KEYSTORE_RELEASE_USER=androiddebugkey \
+    GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=android
+
+# Extra Chromium runtime libraries (kept as a late layer so the heavy
+# toolchain layers above stay cached).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libatk1.0-0t64 libatk-bridge2.0-0t64 libpango-1.0-0 libcairo2 \
+    libclang-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+# Caches (mount a volume at /cache to persist across runs) ------------------
+ENV CARGO_HOME=/cache/cargo \
+    GOMODCACHE=/cache/gomod \
+    GOCACHE=/cache/gocache \
+    NUGET_PACKAGES=/cache/nuget \
+    GOWORK=off \
+    MPLBACKEND=Agg
+RUN mkdir -p /cache /work /results
+
+COPY scripts/ /opt/bench/scripts/
+COPY assets/ /opt/bench/assets/
+RUN chmod +x /opt/bench/scripts/*.sh
+
+ENTRYPOINT ["/opt/bench/scripts/entrypoint.sh"]
