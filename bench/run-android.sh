@@ -4,17 +4,17 @@
 #   ./bench/run-android.sh
 #
 # Builds debug-signed arm64 APKs inside the benchmark container (gdscript,
-# cpp, rust ×2, go, cs), then installs and runs each one on the adb-connected
-# device, scraping frame times from logcat (the implementations print them
-# between SPRITEBENCH_RESULTS markers on mobile). Languages with no Android
-# support (swift, odin, musl) score an explicit 0 fps. The APKs bake in
+# cpp, rust ×2, go, cs, odin), then installs and runs each one on the
+# adb-connected device, scraping frame times from logcat (the implementations
+# print them between SPRITEBENCH_RESULTS markers on mobile). Languages with no
+# Android support (swift, musl) score an explicit 0 fps. The APKs bake in
 # --disable-render-loop so the numbers measure per-frame binding overhead,
 # not the phone's GPU.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 SERIAL=${ANDROID_SERIAL:-}
-LANGS="gdscript cpp rust go cs"
+LANGS="gdscript cpp rust go cs odin"
 RUN_NAME=""
 NO_BUILD=""
 TIMEOUT=${BENCH_RUN_TIMEOUT:-900}
@@ -27,7 +27,7 @@ usage: run-android.sh [options]
 
   --serial <adb-serial>       device to run on (default: the only one attached)
   --langs "gdscript cpp"      subset of android-capable languages
-                              (gdscript cpp rust go cs)
+                              (gdscript cpp rust go cs odin)
   --name <run-name>           results dir name (default <timestamp>-android);
                               reuse a name to merge results across platforms
   --timeout <seconds>         per-run timeout on the device (default 900)
@@ -67,6 +67,7 @@ pkg_for() {
         cpp)                       echo com.spritebench.cpp ;;
         rustbalanced|rustdisengaged) echo com.spritebench.rust ;;
         cs)                        echo com.spritebench.cs ;;
+        odin)                      echo com.spritebench.odin ;;
         graphicsgd)                echo com.example.spritebench_graphicsgd ;;
         *)                         echo "unknown apk label: $1" >&2; return 1 ;;
     esac
@@ -97,6 +98,7 @@ lang_of() {
         cpp) echo cpp ;;
         rustbalanced|rustdisengaged) echo rust ;;
         cs) echo cs ;;
+        odin) echo odin ;;
         graphicsgd) echo go ;;
     esac
 }
@@ -165,7 +167,7 @@ done
 # User rule: languages that cannot run on this platform score an explicit
 # 0 (sprites) instead of being omitted. (musl is exempt: it's a Linux-only
 # variant of the Go entry, so it's absent rather than scored 0.)
-for label in swift odin; do
+for label in swift; do
     csv=$RESULTS/${label}_android_sprites.csv
     [ -f "$csv" ] || { echo 0 >"$csv"; echo "-- $label: unsupported on android -> scored 0 fps"; }
 done

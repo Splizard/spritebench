@@ -5,11 +5,15 @@ source "$(dirname "$0")/common.sh"
 proj=$WORK/spritebench_Odin
 rc=0
 
-# The Toxin bindings declare engine callbacks as proc "fastcall", an
-# x86-only calling convention, so they cannot compile for arm64 targets.
-if [ "$BENCH_PLATFORM" = macos ]; then
-    mode_enabled headless && mark_unsupported odin "Toxin bindings use x86-only 'fastcall', no arm64 support"
-    exit 0
+# The pinned Toxin bindings declare three InputEvent engine callbacks as
+# proc "fastcall", an x86-only calling convention that fails to compile for
+# arm64 targets (macOS/Android/iOS). The convention is never actually relied
+# on (the procs are Godot C function pointers), so patch it to "c" in the
+# staged shared collection. Tmp-file dance: BSD sed (macOS) has no GNU -i.
+odin_input=${ODIN_ROOT:-$(odin root)}/shared/Toxin/Input/InputEvent.odin
+if [ -f "$odin_input" ] && grep -q '"fastcall"' "$odin_input"; then
+    sed 's/proc "fastcall"/proc "c"/' "$odin_input" >"$odin_input.tmp" \
+        && mv "$odin_input.tmp" "$odin_input"
 fi
 
 case $BENCH_PLATFORM in
@@ -19,7 +23,7 @@ case $BENCH_PLATFORM in
 esac
 echo "-- building Odin extension"
 mkdir -p "$proj/bin"
-(cd "$proj" && odin build . -build-mode:dll -o:speed -out:"$odinlib") \
+(cd "$proj" && odin build . -build-mode:shared -o:aggressive -out:"$odinlib") \
     >"$LOGS_DIR/build.odin.log" 2>&1
 
 # The Odin project ships without an export preset; provide one.
@@ -32,6 +36,25 @@ if mode_enabled headless; then
     # The Odin implementation writes the CSV but keeps running; run_native
     # kills it once the output file appears.
     run_native "$NATIVE_BIN" odin odin || rc=1
+fi
+
+if mode_enabled android; then
+    echo "-- building Odin extension (android arm64)"
+    mkdir -p "$proj/bin/android"
+    # Odin defaults to Android API 34, newer than the image's NDK r23 ships
+    # sysroot libs for; pin the API level the NDK actually has (24, matching
+    # the other languages' android builds).
+    if (cd "$proj" && ODIN_ANDROID_NDK="${ANDROID_NDK_ROOT:?}" \
+            odin build . -build-mode:shared -o:aggressive \
+            -target:linux_arm64 -subtarget:android -minimum-os-version:24 \
+            -out:bin/android/libgdexample.so) \
+            >"$LOGS_DIR/build.odin-android.log" 2>&1; then
+        apk=$WORK/build/odin-android/spritebench.apk
+        godot_export "$proj" Android "$apk" && stage_apk odin "$apk" || rc=1
+    else
+        echo "   FAILED: android build (see $LOGS_DIR/build.odin-android.log)"
+        rc=1
+    fi
 fi
 
 if mode_enabled web; then

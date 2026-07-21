@@ -216,6 +216,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libclang-dev \
  && rm -rf /var/lib/apt/lists/*
 
+# The pinned Toxin bindings declare three InputEvent callbacks with the
+# x86-only "fastcall" convention, which refuses to compile for arm64
+# (android); they are Godot C function pointers, so "c" is what they should
+# have been. A late layer (not part of the bindings clone above) so the heavy
+# toolchain layers stay cached; bench_odin.sh re-applies it at bench time for
+# images/Macs provisioned before the fix.
+RUN sed -i 's/proc "fastcall"/proc "c"/' /opt/odin/shared/Toxin/Input/InputEvent.odin || true
+
 # Caches (mount a volume at /cache to persist across runs) ------------------
 ENV CARGO_HOME=/cache/cargo \
     GOMODCACHE=/cache/gomod \

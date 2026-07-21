@@ -4,12 +4,23 @@ import "shared:Toxin"
 import Classes "shared:Godot_Odin_Binds/GD_Classes"
 import GDW "shared:GDWrapper"
 import "shared:GDWrapper/gdAPI"
+import GDE "shared:GDWrapper/gdAPI/gdextension"
 import "core:fmt"
 import "core:os"
 import "base:runtime"
 import "core:math"
 import "core:slice"
 import "core:strconv"
+import "core:strings"
+
+// Odin's -subtarget:android always links the NDK native_app_glue, whose
+// ANativeActivity_onCreate references android_main; a GDExtension library is
+// loaded by Godot's own activity and never enters through the glue, but
+// dlopen still needs the symbol to resolve.
+when ODIN_PLATFORM_SUBTARGET == .Android {
+    @(export)
+    android_main :: proc "c" (app: rawptr) {}
+}
 
 init:: proc ()  {
     Toxin.scene_inits[0] = &THIS_CLASS_NAME_deets
@@ -37,11 +48,15 @@ texture: Classes.Texture2D
 Texture_Class: Classes.Sprite2D_MethodBind_List
 Node2D_Class: Classes.Node2D_MethodBind_List
 Node_Class: Classes.Node_MethodBind_List
+OS_Class: Classes.OS_MethodBind_List
+DisplayServer_Class: Classes.DisplayServer_MethodBind_List
+SceneTree_Class: Classes.SceneTree_MethodBind_List
+os_obj: Classes.OS
 
 // Sprites-at-target benchmark: find the largest sprite count this language
-// sustains at the target frame rate. This implementation only runs on desktop
-// (headless, where the refresh rate is unknown), so the target is a fixed
-// 60 fps. A window sustains the target only if its 1% low (99th-percentile
+// sustains at the target frame rate. The target is the screen refresh rate
+// where one is known (mobile), falling back to 60 fps headless (where the
+// refresh rate is unknown). A window sustains the target only if its 1% low (99th-percentile
 // frame time) holds 0.95×target, so frames that miss the budget fail the
 // window even when the median pace is fine. Doubling/halving brackets the
 // count, binary search refines it, and a best-of-3 verify re-measures at the
@@ -86,12 +101,73 @@ set_count :: proc(n: int) {
     window_frame = 0
 }
 
+new_gdstring :: proc(text: cstring) -> GDW.gdstring {
+    s: GDW.gdstring
+    gdAPI.Strings_Utils.NewWithUtf8Chars(&s, text)
+    return s
+}
+
+has_feature :: proc(tag: cstring) -> bool {
+    tagS := new_gdstring(tag)
+    defer GDW.gdstring_M_List.Destroy(&tagS)
+    r: GDW.Bool
+    OS_Class.has_feature->m_call(os_obj, {&tagS}, &r)
+    return bool(r)
+}
+
+// Print through Godot rather than stdout so the line reaches logcat / the JS
+// console on android/web (stdout is dropped there).
+godot_print :: proc(text: cstring) {
+    @(static) print_fn: GDE.PtrUtilityFunction
+    if print_fn == nil {
+        sn: GDW.StringName
+        gdAPI.StringName_Utils.Utf8Chars(&sn, "print")
+        print_fn = gdAPI.Variant_Utils.GetPtrUtilityFunction(&sn, 2648703342)
+    }
+    s := new_gdstring(text)
+    defer GDW.gdstring_M_List.Destroy(&s)
+    v: GDW.Variant
+    GDW.StringToVariant(&v, &s)
+    args := [1]rawptr{&v}
+    print_fn(nil, cast(GDE.ConstTypePtrargs)raw_data(args[:]), 1)
+}
+
+quit_tree :: proc() {
+    code: GDW.Int = 0
+    SceneTree_Class.quit->m_call(cast(Classes.SceneTree)scene_tree_obj, {&code})
+}
+
 report :: proc(count: int, fps: f64) {
     done = true
-    line := fmt.aprintf("%d %d %.2f\n", count, int(math.round(target)), fps)
+    line := fmt.aprintf("%d %d %.2f", count, int(math.round(target)), fps)
+
+    if has_feature("ios") {
+        // iOS os_log redacts dynamic strings as <private>, so console
+        // scraping is useless. Write to the app sandbox and pull it off
+        // the device via AFC (see run-ios.sh).
+        dir: GDW.gdstring
+        OS_Class.get_user_data_dir->m_call(os_obj, nil, &dir)
+        buf: [512]u8
+        n := gdAPI.Strings_Utils.ToUtf8Chars(&dir, raw_data(buf[:]), len(buf))
+        path := fmt.aprintf("%s/spritebench_results.csv", string(buf[:n]))
+        _ = os.write_entire_file(path, transmute([]u8)fmt.aprintf("%s\n", line))
+        quit_tree()
+        return
+    }
+
+    if has_feature("android") || has_feature("web") {
+        // Captured from logcat / the browser console by the automated
+        // benchmark.
+        godot_print("SPRITEBENCH_RESULTS_BEGIN")
+        godot_print(strings.clone_to_cstring(line))
+        godot_print("SPRITEBENCH_RESULTS_END")
+        quit_tree()
+        return
+    }
+
     output_path := os.get_env_alloc("SPRITEBENCH_OUTPUT", context.allocator)
     if output_path != "" {
-        _ = os.write_entire_file(output_path, transmute([]u8)line)
+        _ = os.write_entire_file(output_path, transmute([]u8)fmt.aprintf("%s\n", line))
     } else {
         fmt.println(line)
     }
@@ -181,6 +257,20 @@ MainLoopStartupCallback :: proc "c" () {
     Classes.Sprite2D_Init_(&Texture_Class)
     Classes.Node2D_Init_(&Node2D_Class)
     Classes.Node_Init_(&Node_Class)
+    Classes.OS_Init_(&OS_Class)
+    Classes.DisplayServer_Init_(&DisplayServer_Class)
+    Classes.SceneTree_Init_(&SceneTree_Class)
+    os_obj = cast(Classes.OS)gdAPI.GlobalGetSingleton(GDW.GDClass_StringName_get(.OS))
+
+    // Target the screen refresh rate where one is known (mobile); headless
+    // desktop reports -1 and keeps the fixed 60 fps target.
+    ds := cast(Classes.DisplayServer)gdAPI.GlobalGetSingleton(GDW.GDClass_StringName_get(.DisplayServer))
+    screen: GDW.Int = -1
+    refresh: GDW.float
+    DisplayServer_Class.screen_get_refresh_rate->m_call(ds, {&screen}, &refresh)
+    if refresh > 0 {
+        target = f64(refresh)
+    }
 
     //Setup an object to hold the MainLoop object.
     scene_tree_obj = GDW.getMainLoop()

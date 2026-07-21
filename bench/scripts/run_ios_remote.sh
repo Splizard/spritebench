@@ -118,6 +118,30 @@ case $LANG in
         export PATH="$ROOT/dotnet:$PATH"
         export GODOT_BIN=godot-mono
         ;;
+    odin)
+        # Brew odin + the bindings staged by setup_macos.sh. Same fastcall
+        # arm64 patch bench_odin.sh applies: the pinned Toxin bindings declare
+        # three InputEvent callbacks with the x86-only "fastcall" convention.
+        export ODIN_ROOT=$ROOT/odin-root
+        odin_input=$ODIN_ROOT/shared/Toxin/Input/InputEvent.odin
+        if [ -f "$odin_input" ] && grep -q '"fastcall"' "$odin_input"; then
+            sed 's/proc "fastcall"/proc "c"/' "$odin_input" >"$odin_input.tmp" \
+                && mv "$odin_input.tmp" "$odin_input"
+        fi
+        # The project ships no export presets; stage the benchmark's, and
+        # stamp the team id (the global stamping pass above already ran).
+        if [ ! -f "$PROJ/export_presets.cfg" ]; then
+            cp "$ROOT/repo/bench/assets/odin_export_presets.cfg" "$PROJ/export_presets.cfg"
+            sed -i '' "s/app_store_team_id=\"[^\"]*\"/app_store_team_id=\"$TEAM\"/" "$PROJ/export_presets.cfg"
+        fi
+        # Host (macos) lib for the exporting editor to load, plus the device
+        # (ios) lib; odin resolves the iPhone SDK via xcrun itself.
+        mkdir -p "$PROJ/bin/ios"
+        ( cd "$PROJ" && odin build . -build-mode:shared -o:aggressive -out:bin/libgdexample.dylib \
+            && odin build . -build-mode:shared -o:aggressive \
+                -target:darwin_arm64 -subtarget:iphone -out:bin/ios/libgdexample.dylib ) \
+            >>"$LOG" 2>&1 || fail "odin ios build (see $LOG)"
+        ;;
     swift)
         # SwiftGodot's source build can't cross-compile to iOS (its
         # code-generator build-tool plugin's host-only deps fail for iOS, and

@@ -57,13 +57,13 @@ done
 [ -n "${IOS_TEAM:-}" ] || { echo "no Apple team id configured: set IOS_TEAM in bench/.env"; exit 1; }
 [ -n "${IOS_KEYCHAIN_PW:-}" ] || { echo "no keychain password configured: set IOS_KEYCHAIN_PW in bench/.env"; exit 1; }
 RUN_NAME=${RUN_NAME:-$(date +%Y%m%d-%H%M%S)-ios}
-ALL_LANGS="gdscript cpp rust rustdisengaged go cs"  # have iOS build recipes on the test device
+ALL_LANGS="gdscript cpp rust rustdisengaged go cs odin"  # have iOS build recipes on the test device
 # swift: SwiftGodot's prebuilt frameworks require iOS 17+ (Swift runtime is
 # in-OS); the iOS test device is an iPhone 8 (iOS 16.7) where it can't load,
-# so swift is unsupported here and scores 0. odin: never.
+# so swift is unsupported here and scores 0.
 # (musl is exempt from the 0 rule: it's a Linux-only variant of the Go entry,
 # absent rather than scored 0.)
-UNSUPPORTED="swift odin"
+UNSUPPORTED="swift"
 LANGS=${LANGS:-$ALL_LANGS}
 
 # lang -> "csv_label bundle_id project_subdir" (preset defaults to iOS)
@@ -75,6 +75,7 @@ lang_spec() {
         rustdisengaged) echo "rustdisengaged com.spritebench.rust spritebench_rust/godot" ;;
         swift)    echo "swift com.spritebench.swift spritebench_swift" ;;
         cs)       echo "cs com.spritebench.cs spritebench_cs" ;;
+        odin)     echo "odin com.spritebench.odin spritebench_Odin" ;;
         go)       echo "graphicsgd com.example.spritebenchgraphicsgd spritebench_go/graphics" ;;
         *) return 1 ;;
     esac
@@ -138,7 +139,7 @@ mkdir -p "results/$RUN_NAME"
 for lang in $UNSUPPORTED; do
     case "$lang" in
         rust) label=rustbalanced ;;
-        cs) label=cs ;; swift) label=swift ;; odin) label=odin ;;
+        cs) label=cs ;; swift) label=swift ;;
     esac
     csv="results/$RUN_NAME/${label}_ios_sprites.csv"
     [ -f "$csv" ] || { echo 0 >"$csv"; echo "-- $lang: unsupported on iOS -> scored 0 fps"; }
