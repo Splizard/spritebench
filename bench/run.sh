@@ -9,6 +9,7 @@ IMAGE=${IMAGE:-localhost/spritebench}
 LANGS=""
 MODES=""
 GRAPHICS_GD=""
+GO_FORK=""
 NO_BUILD=0
 TIMEOUT=""
 DETACH=0
@@ -21,6 +22,8 @@ usage: run.sh [options]
   --langs "gdscript cpp rust go cs swift odin"   subset of languages to run
   --modes "headless web"                         native headless and/or web (chromium)
   --graphics-gd <path>                           benchmark a local graphics.gd checkout
+  --go <path>                                    GOROOT of an alternative Go toolchain for the
+                                                 go leg (e.g. the compiler.gd fork)
   --timeout <seconds>                            per-run timeout (default 1800)
   --no-build                                     skip rebuilding the image
   --name <run-name>                              write into results/<run-name>/ instead of a
@@ -37,6 +40,7 @@ while [ $# -gt 0 ]; do
         --langs)       LANGS=$2; shift 2 ;;
         --modes)       MODES=$2; shift 2 ;;
         --graphics-gd) GRAPHICS_GD=$2; shift 2 ;;
+        --go)          GO_FORK=$2; shift 2 ;;
         --timeout)     TIMEOUT=$2; shift 2 ;;
         --no-build)    NO_BUILD=1; shift ;;
         --name)        RUN_NAME=$2; shift 2 ;;
@@ -78,9 +82,15 @@ fi
 [ -n "${BENCH_ANDROID_ABI:-}" ] && args+=(-e "BENCH_ANDROID_ABI=$BENCH_ANDROID_ABI")
 [ -n "$RUN_NAME" ] && args+=(-e "BENCH_RUN_NAME=$RUN_NAME")
 [ -n "${SPRITEBENCH_START:-}" ] && args+=(-e "SPRITEBENCH_START=$SPRITEBENCH_START")
+[ -n "${GD_NO_FASTCB:-}" ] && args+=(-e "GD_NO_FASTCB=$GD_NO_FASTCB")
+[ -n "${GD_NO_FASTENTRY:-}" ] && args+=(-e "GD_NO_FASTENTRY=$GD_NO_FASTENTRY")
+[ -n "${SPRITEBENCH_PROFILE:-}" ] && args+=(-e "SPRITEBENCH_PROFILE=$SPRITEBENCH_PROFILE")
 [ -n "${SPRITEBENCH_TRACE:-}" ] && args+=(-e "SPRITEBENCH_TRACE=$SPRITEBENCH_TRACE")
 if [ -n "$GRAPHICS_GD" ]; then
     args+=(-v "$(realpath "$GRAPHICS_GD")":/graphics.gd:ro -e GRAPHICS_GD_DIR=/graphics.gd)
+fi
+if [ -n "$GO_FORK" ]; then
+    args+=(-v "$(realpath "$GO_FORK")":/opt/gofork:ro -e GO_FORK_DIR=/opt/gofork)
 fi
 
 exec "$ENGINE" "${args[@]}" "$IMAGE"

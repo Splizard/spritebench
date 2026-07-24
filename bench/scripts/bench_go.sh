@@ -13,6 +13,25 @@ export GODOT_BIN=godot-next
 [ -n "${GODOT_NEXT_PATH_DIR:-}" ] && export PATH=$GODOT_NEXT_PATH_DIR:$PATH
 export GOBIN=$CACHE/gobin
 
+# Benchmark an alternative Go toolchain (e.g. the compiler.gd fork) by
+# mounting its GOROOT and setting GO_FORK_DIR (see run.sh --go). The fork
+# reports GOVERSION "gd1.26.x", which (a) fails go.mod's `go >= 1.26.1`
+# directive check — it parses as language version 1.26 — so the directives in
+# the work copies are relaxed, and (b) fails gd's "go1.26" prefix check for
+# the fastcb overlay, so gd builds the fork's own (stock-layout-incompatible)
+# runtime unpatched, which is what we want.
+if [ -n "${GO_FORK_DIR:-}" ] && [ -d "$GO_FORK_DIR" ]; then
+    echo "-- using Go toolchain fork: $("$GO_FORK_DIR/bin/go" version)"
+    export PATH=$GO_FORK_DIR/bin:$PATH
+    export GOTOOLCHAIN=local
+    sed -i 's/^go 1\.26\.[0-9][0-9]*$/go 1.26/' "$proj/go.mod"
+    if [ -n "${GRAPHICS_GD_DIR:-}" ] && [ -d "$GRAPHICS_GD_DIR" ]; then
+        rsync -a --delete --exclude .git "$GRAPHICS_GD_DIR/" "$WORK/graphics.gd-fork/"
+        sed -i 's/^go 1\.26\.[0-9][0-9]*$/go 1.26/' "$WORK/graphics.gd-fork/go.mod"
+        GRAPHICS_GD_DIR=$WORK/graphics.gd-fork
+    fi
+fi
+
 # All builds go through the `gd` tool (NOT plain `go build`) so gd's build
 # machinery applies (notably the fastcb resident-callback runtime overlay,
 # which is what real users of `gd build` get). Benchmark a local graphics.gd
@@ -47,7 +66,9 @@ if mode_enabled headless; then
         # gd falls back to a stock runtime with only a buried warning when the
         # installed Go doesn't match go.mod (auto-downloaded toolchains can't
         # take overlays); surface it so the number isn't silently un-fastcb'd.
-        grep -q "without the resident-callback" "$LOGS_DIR/build.go.log" && \
+        # Not meaningful on the fork: gd correctly skips the stock overlay
+        # there, and the fork's runtime carries fastcb natively.
+        [ -z "${GO_FORK_DIR:-}" ] && grep -q "without the resident-callback" "$LOGS_DIR/build.go.log" && \
             echo "   WARNING: fastcb runtime patch NOT applied (install a Go toolchain matching go.mod)"
         if [ "$BENCH_PLATFORM" = macos ]; then
             NATIVE_BIN=$(find "$proj/$rel/Contents/MacOS" -type f | head -1)
