@@ -94,6 +94,8 @@ remote_env=(
 )
 [ -n "$LANGS" ]   && remote_env+=("BENCH_LANGS=$LANGS")
 [ -n "$TIMEOUT" ] && remote_env+=("BENCH_RUN_TIMEOUT=$TIMEOUT")
+[ -n "${GD_NO_FASTCB:-}" ]    && remote_env+=("GD_NO_FASTCB=$GD_NO_FASTCB")
+[ -n "${GD_NO_FASTENTRY:-}" ] && remote_env+=("GD_NO_FASTENTRY=$GD_NO_FASTENTRY")
 
 if [ -n "$GRAPHICS_GD" ]; then
     echo "== syncing local graphics.gd checkout =="

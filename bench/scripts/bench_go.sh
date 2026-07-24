@@ -32,6 +32,20 @@ if [ -n "${GO_FORK_DIR:-}" ] && [ -d "$GO_FORK_DIR" ]; then
     fi
 fi
 
+# The fastcb runtime overlay cannot apply to a toolchain the go command
+# auto-downloads into the module cache (go refuses -overlay replacements
+# there) — which is what happens when the PATH go is older than go.mod's
+# directive. If a real sdk toolchain (golang.org/dl shim layout) matching
+# gd's go1.26 requirement is installed, select it directly.
+if [ -z "${GO_FORK_DIR:-}" ] && [ -z "${GOTOOLCHAIN:-}" ]; then
+    sdkgo=$(ls -d "$HOME"/sdk/go1.26*/bin 2>/dev/null | sort -V | tail -1)
+    if [ -n "$sdkgo" ] && [ -x "$sdkgo/go" ]; then
+        echo "-- using $("$sdkgo/go" version) from $sdkgo"
+        export PATH=$sdkgo:$PATH
+        export GOTOOLCHAIN=local
+    fi
+fi
+
 # All builds go through the `gd` tool (NOT plain `go build`) so gd's build
 # machinery applies (notably the fastcb resident-callback runtime overlay,
 # which is what real users of `gd build` get). Benchmark a local graphics.gd
