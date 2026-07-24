@@ -123,6 +123,8 @@ remote_env="$remote_env IOS_TEAM=$IOS_TEAM IOS_KEYCHAIN_PW=$IOS_KEYCHAIN_PW"
 [ -n "$IOS17_UDID" ] && remote_env="$remote_env IOS17_UDID=$IOS17_UDID"
 [ -n "$GRAPHICS_GD" ] && remote_env="$remote_env GRAPHICS_GD_DIR='$ROOT/graphics.gd'"
 [ -n "$TIMEOUT" ]        && remote_env="$remote_env BENCH_RUN_TIMEOUT=$TIMEOUT"
+[ -n "${GD_NO_FASTCB:-}" ]    && remote_env="$remote_env GD_NO_FASTCB=$GD_NO_FASTCB"
+[ -n "${GD_NO_FASTENTRY:-}" ] && remote_env="$remote_env GD_NO_FASTENTRY=$GD_NO_FASTENTRY"
 
 rc=0
 for lang in $LANGS; do

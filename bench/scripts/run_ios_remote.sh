@@ -46,6 +46,17 @@ case $LANG in
         mkdir -p "$ROOT/go-godot-shim"; ln -sf "$ROOT/bin/godot-next" "$ROOT/go-godot-shim/godot"
         export PATH="$ROOT/go-godot-shim:$ROOT/bin:$PATH"
         export GOBIN=$ROOT/cache/gobin
+        # The fastcb runtime overlay cannot apply to a toolchain the go
+        # command auto-downloads into the module cache (go refuses -overlay
+        # replacements there). Prefer a real sdk install, as bench_go.sh does.
+        if [ -z "${GOTOOLCHAIN:-}" ]; then
+            sdkgo=$(ls -d "$HOME"/sdk/go1.26*/bin 2>/dev/null | sort -V | tail -1)
+            if [ -n "$sdkgo" ] && [ -x "$sdkgo/go" ]; then
+                echo "-- [go] using $("$sdkgo/go" version) from $sdkgo"
+                export PATH=$sdkgo:$PATH
+                export GOTOOLCHAIN=local
+            fi
+        fi
         # Xcode 26's compilation cache fails with CacheCheckFailed inside the
         # `godot --export-release iOS` xcodebuild step; disable it.
         export COMPILATION_CACHE_ENABLE_CACHING=NO CLANG_ENABLE_COMPILE_CACHE=NO
