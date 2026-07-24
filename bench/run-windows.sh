@@ -107,6 +107,8 @@ echo "== launching benchmark on $HOST =="
     printf 'set BENCH_RUN_NAME=%s\r\n' "$RUN_NAME"
     [ -n "$LANGS" ]   && printf 'set BENCH_LANGS=%s\r\n' "$LANGS"
     [ -n "$TIMEOUT" ] && printf 'set BENCH_RUN_TIMEOUT=%s\r\n' "$TIMEOUT"
+    [ -n "${GD_NO_FASTCB:-}" ]    && printf 'set GD_NO_FASTCB=%s\r\n' "$GD_NO_FASTCB"
+    [ -n "${GD_NO_FASTENTRY:-}" ] && printf 'set GD_NO_FASTENTRY=%s\r\n' "$GD_NO_FASTENTRY"
     # Forward slashes so git-bash and the go toolchain both accept the path.
     [ -n "$GRAPHICS_GD" ] && printf 'set GRAPHICS_GD_DIR=%%USERPROFILE:\\=/%%/spritebench-bench/graphics.gd\r\n'
     printf '"C:\\Program Files\\Git\\bin\\bash.exe" "%%USERPROFILE%%\\spritebench-bench\\repo\\bench\\scripts\\run_windows_remote.sh"\r\n'
