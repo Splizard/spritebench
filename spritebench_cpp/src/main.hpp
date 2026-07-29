@@ -20,7 +20,7 @@ using namespace godot;
 class Main : public Node2D {
 	GDCLASS(Main, Node2D)
 
-	const int GLOBAL_WARMUP = 100;
+	const int GLOBAL_WARMUP = 600;
 	const int WINDOW_WARMUP = 40;
 	const int WINDOW_MEASURE = 120;
 	const int START_COUNT = 20000;
@@ -28,6 +28,7 @@ class Main : public Node2D {
 	const int MAX_COUNT = 2560000;
 	const double SUSTAIN = 0.95;
 	const int REFINE_ROUNDS = 6;
+	const int CONFIRM_FAILS = 2;
 	const int LOW_INDEX = WINDOW_MEASURE * 99 / 100;
 	static const int VERIFY_WINDOWS = 3;
 	const int VERIFY_STEP = 16;
@@ -38,6 +39,7 @@ class Main : public Node2D {
 	int lo = 0;
 	int hi = 0;
 	int rounds = 0;
+	int fails = 0;
 	bool verifying = false;
 	double verify_fps[VERIFY_WINDOWS] = {};
 	int verify_done = 0;

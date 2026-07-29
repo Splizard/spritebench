@@ -13,7 +13,7 @@ import SwiftGodot
 // "<max_sprites> <target_fps> <fps_at_max>".
 @Godot
 class SpriteBench: Node2D {
-    private let globalWarmup = 100
+    private let globalWarmup = 600
     private let windowWarmup = 40
     private let windowMeasure = 120
     private let startCount = 20_000
@@ -21,6 +21,7 @@ class SpriteBench: Node2D {
     private let maxCount = 2_560_000
     private let sustain = 0.95
     private let refineRounds = 6
+    private let confirmFails = 2
     private let verifyWindows = 3
     private let verifyStep = 16
 
@@ -30,6 +31,7 @@ class SpriteBench: Node2D {
     private var lo = 0
     private var hi = 0
     private var rounds = 0
+    private var fails = 0
     private var verifying = false
     private var verifyFps: [Double] = []
     private var globalFrame = 0
@@ -121,8 +123,20 @@ class SpriteBench: Node2D {
             return
         }
         if sustained {
+            fails = 0
             lo = count
+        } else if fails + 1 < confirmFails {
+            // One bad window must not pin the ceiling. Once hi is set the search
+            // can never rise above it again, so a single startup hitch, scheduler
+            // hiccup or thermal blip permanently confines the run to a count the
+            // machine beats comfortably -- and the verify pass, which only
+            // re-checks lo, cannot detect it. Re-measure the same count and
+            // believe the failure only if it repeats.
+            fails += 1
+            setCount(count)
+            return
         } else {
+            fails = 0
             hi = count
         }
         if !sustained && count <= minCount {

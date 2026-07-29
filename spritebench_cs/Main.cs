@@ -14,7 +14,7 @@ using System.Collections.Generic;
 // "<max_sprites> <target_fps> <fps_at_max>".
 public partial class Main : Node2D
 {
-	private const int GlobalWarmup = 100;
+	private const int GlobalWarmup = 600;
 	private const int WindowWarmup = 40;
 	private const int WindowMeasure = 120;
 	private const int StartCount = 20_000;
@@ -22,6 +22,7 @@ public partial class Main : Node2D
 	private const int MaxCount = 2_560_000;
 	private const double Sustain = 0.95;
 	private const int RefineRounds = 6;
+	private const int ConfirmFails = 2;
 	private const int LowIndex = WindowMeasure * 99 / 100;
 	private const int VerifyWindows = 3;
 	private const int VerifyStep = 16;
@@ -32,6 +33,7 @@ public partial class Main : Node2D
 	private int _lo = 0;
 	private int _hi = 0;
 	private int _rounds = 0;
+	private int _fails = 0;
 	private bool _verifying = false;
 	private readonly List<double> _verifyFps = new List<double>();
 	private int _globalFrame = 0;
@@ -111,10 +113,24 @@ public partial class Main : Node2D
 		}
 		if (sustained)
 		{
+			_fails = 0;
 			_lo = count;
+		}
+		else if (_fails + 1 < ConfirmFails)
+		{
+			// One bad window must not pin the ceiling. Once hi is set the search
+			// can never rise above it again, so a single startup hitch, scheduler
+			// hiccup or thermal blip permanently confines the run to a count the
+			// machine beats comfortably -- and the verify pass, which only
+			// re-checks lo, cannot detect it. Re-measure the same count and
+			// believe the failure only if it repeats.
+			_fails++;
+			SetCount(count);
+			return;
 		}
 		else
 		{
+			_fails = 0;
 			_hi = count;
 		}
 		if (!sustained && count <= MinCount)

@@ -32,7 +32,7 @@ import (
 // passes. The result is one line:
 // "<max_sprites> <target_fps> <fps_at_max>".
 const (
-	GlobalWarmup  = 100
+	GlobalWarmup  = 600
 	WindowWarmup  = 40
 	WindowMeasure = 120
 	StartCount    = 20_000
@@ -40,6 +40,7 @@ const (
 	MaxCount      = 2_560_000
 	Sustain       = 0.95
 	RefineRounds  = 6
+	ConfirmFails  = 2
 	LowIndex      = WindowMeasure * 99 / 100
 	VerifyWindows = 3
 	VerifyStep    = 16
@@ -54,6 +55,7 @@ type Main struct {
 	lo          int
 	hi          int
 	rounds      int
+	fails       int
 	verifying   bool
 	verifyFps   []float64
 	globalFrame int
@@ -135,9 +137,22 @@ func (m *Main) Process(delta Float.X) {
 		}
 		return
 	}
-	if sustained {
+	switch {
+	case sustained:
+		m.fails = 0
 		m.lo = count
-	} else {
+	case m.fails+1 < ConfirmFails:
+		// One bad window must not pin the ceiling. Once hi is set the search
+		// can never rise above it again, so a single startup hitch, scheduler
+		// hiccup or thermal blip permanently confines the run to a count the
+		// machine beats comfortably -- and the verify pass, which only
+		// re-checks lo, cannot detect it. Re-measure the same count and
+		// believe the failure only if it repeats.
+		m.fails++
+		m.setCount(count)
+		return
+	default:
+		m.fails = 0
 		m.hi = count
 	}
 	if !sustained && count <= MinCount {

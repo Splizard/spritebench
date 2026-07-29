@@ -11,7 +11,7 @@ extends Node2D
 # passes. The result is one line:
 # "<max_sprites> <target_fps> <fps_at_max>".
 
-const global_warmup := 100
+const global_warmup := 600
 const window_warmup := 40
 const window_measure := 120
 const start_count := 20_000
@@ -19,6 +19,7 @@ const min_count := 1_250
 const max_count := 2_560_000
 const sustain := 0.95
 const refine_rounds := 6
+const confirm_fails := 2
 const low_index := window_measure * 99 / 100
 const verify_windows := 3
 const verify_step := 16
@@ -29,6 +30,7 @@ var target := 60.0
 var lo := 0
 var hi := 0
 var rounds := 0
+var fails := 0
 var verifying := false
 var verify_fps: Array[float] = []
 var global_frame := 0
@@ -83,8 +85,20 @@ func _process(delta: float) -> void:
 			_set_count(maxi(count - count / verify_step, min_count))
 		return
 	if sustained:
+		fails = 0
 		lo = count
+	elif fails + 1 < confirm_fails:
+		# One bad window must not pin the ceiling. Once hi is set the search
+		# can never rise above it again, so a single startup hitch, scheduler
+		# hiccup or thermal blip permanently confines the run to a count the
+		# machine beats comfortably -- and the verify pass, which only
+		# re-checks lo, cannot detect it. Re-measure the same count and
+		# believe the failure only if it repeats.
+		fails += 1
+		_set_count(count)
+		return
 	else:
+		fails = 0
 		hi = count
 	if not sustained and count <= min_count:
 		_report(0, fps)

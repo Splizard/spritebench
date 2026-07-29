@@ -11,7 +11,7 @@ use crate::sprite::BenchSprite;
 // re-measures at the answer, walking the count down until the median window
 // passes. The result is one line:
 // "<max_sprites> <target_fps> <fps_at_max>".
-const GLOBAL_WARMUP: i32 = 100;
+const GLOBAL_WARMUP: i32 = 600;
 const WINDOW_WARMUP: i32 = 40;
 const WINDOW_MEASURE: usize = 120;
 const START_COUNT: usize = 20_000;
@@ -19,6 +19,7 @@ const MIN_COUNT: usize = 1_250;
 const MAX_COUNT: usize = 2_560_000;
 const SUSTAIN: f64 = 0.95;
 const REFINE_ROUNDS: i32 = 6;
+const CONFIRM_FAILS: i32 = 2;
 const LOW_INDEX: usize = WINDOW_MEASURE * 99 / 100;
 const VERIFY_WINDOWS: usize = 3;
 const VERIFY_STEP: usize = 16;
@@ -32,6 +33,7 @@ struct Main {
     lo: usize,
     hi: usize,
     rounds: i32,
+    fails: i32,
     verifying: bool,
     verify_fps: Vec<f64>,
     global_frame: i32,
@@ -52,6 +54,7 @@ impl INode2D for Main {
             lo: 0,
             hi: 0,
             rounds: 0,
+            fails: 0,
             verifying: false,
             verify_fps: Vec::new(),
             global_frame: 0,
@@ -110,8 +113,20 @@ impl INode2D for Main {
             return;
         }
         if sustained {
+            self.fails = 0;
             self.lo = count;
+        } else if self.fails + 1 < CONFIRM_FAILS {
+            // One bad window must not pin the ceiling. Once hi is set the search
+            // can never rise above it again, so a single startup hitch, scheduler
+            // hiccup or thermal blip permanently confines the run to a count the
+            // machine beats comfortably -- and the verify pass, which only
+            // re-checks lo, cannot detect it. Re-measure the same count and
+            // believe the failure only if it repeats.
+            self.fails += 1;
+            self.set_count(count);
+            return;
         } else {
+            self.fails = 0;
             self.hi = count;
         }
         if !sustained && count <= MIN_COUNT {

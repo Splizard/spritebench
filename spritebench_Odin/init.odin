@@ -62,7 +62,7 @@ os_obj: Classes.OS
 // count, binary search refines it, and a best-of-3 verify re-measures at the
 // answer, walking the count down until the median window passes.
 // The result is one line: "<max_sprites> <target_fps> <fps_at_max>".
-global_warmup::100
+global_warmup::600
 window_warmup::40
 window_measure::120
 start_count::20000
@@ -70,6 +70,7 @@ min_count::1250
 max_count::2560000
 sustain::0.95
 refine_rounds::6
+confirm_fails::2
 low_index::window_measure * 99 / 100
 verify_windows::3
 verify_step::16
@@ -80,6 +81,7 @@ sprites: [dynamic]^GDW.Object
 lo: int = 0
 hi: int = 0
 rounds: int = 0
+fails: int = 0
 verifying: bool = false
 verify_fps: [verify_windows]f64
 verify_done: int = 0
@@ -223,8 +225,20 @@ MainLoopFrameCallback :: proc "c" () {
         return
     }
     if sustained {
+        fails = 0
         lo = count
+    } else if fails + 1 < confirm_fails {
+        // One bad window must not pin the ceiling. Once hi is set the search
+        // can never rise above it again, so a single startup hitch, scheduler
+        // hiccup or thermal blip permanently confines the run to a count the
+        // machine beats comfortably -- and the verify pass, which only
+        // re-checks lo, cannot detect it. Re-measure the same count and
+        // believe the failure only if it repeats.
+        fails += 1
+        set_count(count)
+        return
     } else {
+        fails = 0
         hi = count
     }
     if !sustained && count <= min_count {

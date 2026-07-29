@@ -73,8 +73,19 @@ void Main::_process(double delta) {
 		return;
 	}
 	if (sustained) {
+		fails = 0;
 		lo = count;
+	} else if (++fails < CONFIRM_FAILS) {
+		// One bad window must not pin the ceiling. Once hi is set the search
+		// can never rise above it again, so a single startup hitch, scheduler
+		// hiccup or thermal blip permanently confines the run to a count the
+		// machine beats comfortably -- and the verify pass, which only
+		// re-checks lo, cannot detect it. Re-measure the same count and
+		// believe the failure only if it repeats.
+		set_count(count);
+		return;
 	} else {
+		fails = 0;
 		hi = count;
 	}
 	if (!sustained && count <= MIN_COUNT) {
