@@ -128,8 +128,39 @@ rc=0
 
 echo "== pulling results =="
 mkdir -p "results/$RUN_NAME"
-"${SSH[@]}" "tar -czf - -C \"$ROOT_WIN\\results\\$RUN_NAME\" ." 2>/dev/null \
-    | tar -xzf - -C "results/$RUN_NAME"
+# Fetched one file at a time rather than as a tar stream. Tarring the results
+# directory wedged indefinitely twice, leaving a five-hour sweep one hang away
+# from being lost, and it still wedges with the logs excluded -- tar over this
+# host's ssh is simply not dependable. `type` per file is slower but each
+# transfer is bounded, a hang costs one result instead of all of them, and a
+# failure is reported rather than silently producing a short directory.
+#
+# Logs stay on the Windows host; they are diagnostics, they are large, and
+# they are what made the bulk transfer worth avoiding. Read them there.
+csvs=$("${SSH[@]}" "dir /b \"$ROOT_WIN\\results\\$RUN_NAME\\*.csv\"" </dev/null 2>/dev/null | tr -d '\r')
+if [ -z "$csvs" ]; then
+    echo "!! no CSVs found on $HOST in $ROOT_WIN\\results\\$RUN_NAME"
+else
+    pulled=0 missed=0
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        # </dev/null: ssh would otherwise swallow the here-string feeding this
+        # loop, stopping after the first file while reporting success.
+        for attempt in 1 2; do
+            timeout 120 "${SSH[@]}" "type \"$ROOT_WIN\\results\\$RUN_NAME\\$f\"" </dev/null 2>/dev/null \
+                | tr -d '\r' | grep -v '^$' >"results/$RUN_NAME/$f"
+            [ -s "results/$RUN_NAME/$f" ] && break
+        done
+        if [ -s "results/$RUN_NAME/$f" ]; then
+            pulled=$((pulled + 1))
+        else
+            echo "!! failed to pull $f (still on $HOST)"
+            rm -f "results/$RUN_NAME/$f"
+            missed=$((missed + 1))
+        fi
+    done <<<"$csvs"
+    echo "   pulled $pulled result file(s)${missed:+, $missed missing}"
+fi
 
 echo "== plotting =="
 cp assets/plot.py "results/$RUN_NAME/plot.py" 2>/dev/null || true
