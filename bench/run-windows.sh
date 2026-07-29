@@ -18,6 +18,7 @@ cd "$(dirname "$0")"
 HOST=${SPRITEBENCH_WIN_HOST:-}
 LANGS=""
 TIMEOUT=""
+REPEATS=""
 RUN_NAME=""
 GRAPHICS_GD=""
 SETUP_ONLY=0
@@ -31,6 +32,8 @@ usage: run-windows.sh [options]
                                                  from bench/.env, see .env.example)
   --langs "gdscript cpp rust go cs swift odin"   subset of languages to run
   --graphics-gd <path>                           benchmark a local graphics.gd checkout
+  --repeats <n>                                  run the whole set n times, interleaved, so
+                                                 the plot can show the spread (default 1)
   --timeout <seconds>                            per-run timeout (default 1800)
   --name <run-name>                              results dir name (default <timestamp>-windows);
                                                  reuse a name to merge results across platforms
@@ -45,6 +48,7 @@ while [ $# -gt 0 ]; do
         --host)       HOST=$2; shift 2 ;;
         --langs)      LANGS=$2; shift 2 ;;
         --graphics-gd) GRAPHICS_GD=$2; shift 2 ;;
+        --repeats)    REPEATS=$2; shift 2 ;;
         --timeout)    TIMEOUT=$2; shift 2 ;;
         --name)       RUN_NAME=$2; shift 2 ;;
         --setup-only) SETUP_ONLY=1; shift ;;
@@ -107,6 +111,11 @@ echo "== launching benchmark on $HOST =="
     printf 'set BENCH_RUN_NAME=%s\r\n' "$RUN_NAME"
     [ -n "$LANGS" ]   && printf 'set BENCH_LANGS=%s\r\n' "$LANGS"
     [ -n "$TIMEOUT" ] && printf 'set BENCH_RUN_TIMEOUT=%s\r\n' "$TIMEOUT"
+    [ -n "$REPEATS" ] && printf 'set BENCH_REPEATS=%s\r\n' "$REPEATS"
+    # The engine has to match whatever the other platforms ran, or the numbers
+    # pulled back cannot be put beside them: 4.6 and 4.7 differ on this
+    # workload by more than most of the languages differ from each other.
+    [ -n "${GODOT_BIN:-}" ]          && printf 'set GODOT_BIN=%s\r\n' "$GODOT_BIN"
     [ -n "${GD_NO_FASTCB:-}" ]    && printf 'set GD_NO_FASTCB=%s\r\n' "$GD_NO_FASTCB"
     [ -n "${GD_NO_FASTENTRY:-}" ] && printf 'set GD_NO_FASTENTRY=%s\r\n' "$GD_NO_FASTENTRY"
     # Forward slashes so git-bash and the go toolchain both accept the path.

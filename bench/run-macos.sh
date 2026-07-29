@@ -17,6 +17,7 @@ cd "$(dirname "$0")"
 HOST=${SPRITEBENCH_MAC_HOST:-}
 LANGS=""
 TIMEOUT=""
+REPEATS=""
 RUN_NAME=""
 GRAPHICS_GD=""
 SETUP_ONLY=0
@@ -30,6 +31,8 @@ usage: run-macos.sh [options]
                                                  from bench/.env, see .env.example)
   --langs "gdscript cpp rust go cs swift odin"   subset of languages to run
   --graphics-gd <path>                           benchmark a local graphics.gd checkout
+  --repeats <n>                                  run the whole set n times, interleaved, so
+                                                 the plot can show the spread (default 1)
   --timeout <seconds>                            per-run timeout (default 1800)
   --name <run-name>                              results dir name (default <timestamp>-macos);
                                                  reuse a name to merge results across platforms
@@ -44,6 +47,7 @@ while [ $# -gt 0 ]; do
         --host)        HOST=$2; shift 2 ;;
         --langs)       LANGS=$2; shift 2 ;;
         --graphics-gd) GRAPHICS_GD=$2; shift 2 ;;
+        --repeats)     REPEATS=$2; shift 2 ;;
         --timeout)     TIMEOUT=$2; shift 2 ;;
         --name)        RUN_NAME=$2; shift 2 ;;
         --setup-only)  SETUP_ONLY=1; shift ;;
@@ -94,6 +98,11 @@ remote_env=(
 )
 [ -n "$LANGS" ]   && remote_env+=("BENCH_LANGS=$LANGS")
 [ -n "$TIMEOUT" ] && remote_env+=("BENCH_RUN_TIMEOUT=$TIMEOUT")
+[ -n "$REPEATS" ] && remote_env+=("BENCH_REPEATS=$REPEATS")
+# The engine has to match whatever the other platforms ran, or the numbers
+# pulled back here cannot be put beside them: 4.6 and 4.7 differ on this
+# workload by more than most of the languages differ from each other.
+[ -n "${GODOT_BIN:-}" ]          && remote_env+=("GODOT_BIN=$GODOT_BIN")
 [ -n "${GD_NO_FASTCB:-}" ]    && remote_env+=("GD_NO_FASTCB=$GD_NO_FASTCB")
 [ -n "${GD_NO_FASTENTRY:-}" ] && remote_env+=("GD_NO_FASTENTRY=$GD_NO_FASTENTRY")
 

@@ -38,7 +38,9 @@ fi
 # directive. If a real sdk toolchain (golang.org/dl shim layout) matching
 # gd's go1.26 requirement is installed, select it directly.
 if [ -z "${GO_FORK_DIR:-}" ] && [ -z "${GOTOOLCHAIN:-}" ]; then
-    sdkgo=$(ls -d "$HOME"/sdk/go1.26*/bin 2>/dev/null | sort -V | tail -1)
+    # `|| true`: an empty glob makes ls exit non-zero, which under
+    # `set -o pipefail` would abort the script (the 2>/dev/null hides why).
+    sdkgo=$(ls -d "$HOME"/sdk/go1.26*/bin 2>/dev/null | sort -V | tail -1 || true)
     if [ -n "$sdkgo" ] && [ -x "$sdkgo/go" ]; then
         echo "-- using $("$sdkgo/go" version) from $sdkgo"
         export PATH=$sdkgo:$PATH

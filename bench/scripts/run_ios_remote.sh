@@ -245,6 +245,9 @@ if [ "$LANG" = swift ]; then
     xcrun devicectl device uninstall app --device "$D17" "$BUNDLE" >>"$LOG" 2>&1 || true
     xcrun devicectl device install app --device "$D17" "$app" >>"$LOG" 2>&1 || fail "devicectl install (see $LOG)"
     for attempt in 1 2 3 4 5; do
+        # If swift is ever re-enabled here, this launch needs the protocol
+        # passed too (devicectl takes --environment-variables as a JSON dict);
+        # without it swift would run the search while its neighbours calibrate.
         timeout "${BENCH_RUN_TIMEOUT:-300}" xcrun devicectl device process launch --device "$D17" \
             --terminate-existing "$BUNDLE" --arguments "--disable-render-loop" >>"$LOG" 2>&1 || true
         sleep 45
@@ -288,13 +291,23 @@ else
     # can't launch until unlocked (the iPhone 8 here has no passcode). The
     # app's screen goes black under --disable-render-loop while it runs.
     echo "-- [$LANG] launch + pull"
+    # The app runs ON the device, so nothing this script exports reaches it:
+    # anything the benchmark reads with OS.get_environment has to be handed
+    # over explicitly. Nothing needs it today — the search protocol takes no
+    # configuration — but a setting that silently fails to arrive looks
+    # exactly like one that arrived and did nothing, so the mechanism stays.
+    # Expanded with the ${a[@]+...} guard below: this script runs under set -u
+    # and the remote bash is 3.2, where expanding an empty array is an unbound
+    # variable error rather than nothing.
+    launch_env=()
+    [ -n "${SPRITEBENCH_DEVICE_ENV:-}" ] && launch_env+=(--env "$SPRITEBENCH_DEVICE_ENV")
     if [ "$LANG" = go ]; then
         # The Go app runs to completion then exits on its own. It must be
         # launched DETACHED and left alone: a resident idevicedebug session is
         # torn down by the AFC/house_arrest pull, which takes the app with it
         # mid-run (and re-launching each retry restarts the benchmark). Launch
         # once, then poll only the pull until the results file appears.
-        idevicedebug --detach -u "$UDID" run "$BUNDLE" -- --disable-render-loop >>"$LOG" 2>&1 || true
+        idevicedebug --detach -u "$UDID" ${launch_env[@]+"${launch_env[@]}"} run "$BUNDLE" -- --disable-render-loop >>"$LOG" 2>&1 || true
         # The sprites-at-target search runs for a few minutes; poll generously.
         for attempt in $(seq 1 24); do
             sleep 15
@@ -306,7 +319,7 @@ else
         done
     else
         for attempt in 1 2 3 4 5; do
-            timeout "${BENCH_RUN_TIMEOUT:-300}" idevicedebug -u "$UDID" run "$BUNDLE" -- --disable-render-loop >>"$LOG" 2>&1 || true
+            timeout "${BENCH_RUN_TIMEOUT:-300}" idevicedebug -u "$UDID" ${launch_env[@]+"${launch_env[@]}"} run "$BUNDLE" -- --disable-render-loop >>"$LOG" 2>&1 || true
             rm -rf "$OUT/dl-$LANG"
             ios-deploy --id "$UDID" --bundle_id "$BUNDLE" --download=/Documents --to "$OUT/dl-$LANG" >>"$LOG" 2>&1 || true
             found=$(find "$OUT/dl-$LANG" -name 'spritebench_results.csv' 2>/dev/null | head -1)
@@ -318,5 +331,12 @@ else
     [ -n "$found" ] || fail "no results CSV in sandbox after retries (device stayed locked? see $LOG)"
     ideviceinstaller -u "$UDID" uninstall "$BUNDLE" >>"$LOG" 2>&1 || true
 fi
-cp "$found" "$CSV"
-echo "   ok: $(cat "$CSV" | head -1) -> $(basename "$CSV")"
+# One row per pass, so a run with repeats carries its own spread. The first
+# pass truncates (a re-run of one language replaces its old result, as
+# before); later passes append.
+if [ "${BENCH_PASS:-1}" -gt 1 ]; then
+    cat "$found" >>"$CSV"
+else
+    cp "$found" "$CSV"
+fi
+echo "   ok: $(tail -1 "$CSV") -> $(basename "$CSV")"

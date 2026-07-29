@@ -16,6 +16,17 @@ if [ -f "$odin_input" ] && grep -q '"fastcall"' "$odin_input"; then
         && mv "$odin_input.tmp" "$odin_input"
 fi
 
+# The pinned Toxin declares godot_entry_init without the GDExtensionBool
+# return the engine contract requires, so the engine reads leftover register
+# state: Godot 4.6 happened to see nonzero, 4.7 sees false and refuses to
+# load the extension. Upstream has since fixed it; patch the pinned copy.
+odin_entry=${ODIN_ROOT:-$(odin root)}/shared/Toxin/main_entry.odin
+if [ -f "$odin_entry" ] && ! grep -q 'Initialization) -> b8' "$odin_entry"; then
+    sed -e 's/initialization: ^GDE.Initialization) {/initialization: ^GDE.Initialization) -> b8 {/' \
+        -e 's/^    initialization.minimum_initialization_level = .INITIALIZATION_SCENE$/&\n    return true/' \
+        "$odin_entry" >"$odin_entry.tmp" && mv "$odin_entry.tmp" "$odin_entry"
+fi
+
 case $BENCH_PLATFORM in
     macos)   odinlib=bin/libgdexample.dylib ;;
     windows) odinlib=bin/libgdexample.dll ;;

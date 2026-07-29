@@ -21,6 +21,7 @@ HOST=${SPRITEBENCH_MAC_HOST:-}
 LANGS=""
 RUN_NAME=""
 TIMEOUT=""
+REPEATS=1
 
 usage() {
     cat <<'EOF'
@@ -31,6 +32,8 @@ usage: run-ios.sh [options]
   --langs "gdscript cpp go"    subset of iOS-capable languages
   --name <run-name>            results dir name (default <timestamp>-ios);
                                reuse a name to merge results across platforms
+  --repeats <n>                run the whole set n times, interleaved, so the
+                               plot can show the spread (default 1)
   --timeout <seconds>          per-run device timeout (default 300)
   --graphics-gd <path>         benchmark a local graphics.gd checkout (go leg)
 
@@ -46,6 +49,7 @@ while [ $# -gt 0 ]; do
         --host)        HOST=$2; shift 2 ;;
         --langs)       LANGS=$2; shift 2 ;;
         --name)        RUN_NAME=$2; shift 2 ;;
+        --repeats)     REPEATS=$2; shift 2 ;;
         --timeout)     TIMEOUT=$2; shift 2 ;;
         --graphics-gd) GRAPHICS_GD=$2; shift 2 ;;
         -h|--help)     usage ;;
@@ -125,12 +129,22 @@ remote_env="$remote_env IOS_TEAM=$IOS_TEAM IOS_KEYCHAIN_PW=$IOS_KEYCHAIN_PW"
 [ -n "$TIMEOUT" ]        && remote_env="$remote_env BENCH_RUN_TIMEOUT=$TIMEOUT"
 [ -n "${GD_NO_FASTCB:-}" ]    && remote_env="$remote_env GD_NO_FASTCB=$GD_NO_FASTCB"
 [ -n "${GD_NO_FASTENTRY:-}" ] && remote_env="$remote_env GD_NO_FASTENTRY=$GD_NO_FASTENTRY"
+# GODOT_BIN selects the engine; the C# leg overrides it with godot-mono for
+# itself, which is what it needs since only the 4.6 templates have a mono
+# variant.
+[ -n "${GODOT_BIN:-}" ]          && remote_env="$remote_env GODOT_BIN=$GODOT_BIN"
 
 rc=0
-for lang in $LANGS; do
-    spec=$(lang_spec "$lang") || { echo "!! no iOS spec for $lang, skipping"; continue; }
-    echo "==== $lang ===="
-    "${SSH[@]}" "env $remote_env bash '$ROOT/repo/bench/scripts/run_ios_remote.sh' $lang $spec" || rc=1
+# The repeat wraps the language loop rather than sitting inside it, so the
+# passes interleave: a device that warms up over the run then moves every
+# language together instead of penalising whichever installed last.
+for pass in $(seq 1 "$REPEATS"); do
+    [ "$REPEATS" -gt 1 ] && echo "######## pass $pass/$REPEATS ########"
+    for lang in $LANGS; do
+        spec=$(lang_spec "$lang") || { echo "!! no iOS spec for $lang, skipping"; continue; }
+        echo "==== $lang ===="
+        "${SSH[@]}" "env BENCH_PASS=$pass $remote_env bash '$ROOT/repo/bench/scripts/run_ios_remote.sh' $lang $spec" || rc=1
+    done
 done
 
 echo "== pulling results =="

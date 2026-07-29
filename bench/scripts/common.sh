@@ -142,14 +142,28 @@ wait_for_output() {
 # running).
 run_native() {
     local bin=$1 csv=$RESULTS_DIR/${2}_${BENCH_CSV_TAG}sprites.csv label=$3
+    local pass=${BENCH_PASS:-1}
     local log=$LOGS_DIR/run.$label.native.log
-    rm -f "$csv"
-    echo "-- running $label (native headless, $BENCH_PLATFORM)"
+    # One row per pass, so a run with BENCH_REPEATS>1 carries its own spread
+    # and the plot can show it instead of a single point that hides it. The
+    # first pass truncates (a re-run of one language replaces its old result,
+    # as before); later passes append. The log is per pass for the same reason
+    # a single log would otherwise only hold the last one.
+    if [ "$pass" -gt 1 ]; then
+        log=$LOGS_DIR/run.$label.native.pass$pass.log
+    else
+        rm -f "$csv"
+    fi
+    local out=$WORK/.spritebench_out.$$.csv
+    rm -f "$out"
+    echo "-- running $label (native headless, $BENCH_PLATFORM)${BENCH_REPEATS:+ pass $pass/$BENCH_REPEATS}"
     # exec so $! is the game's actual PID, not a wrapper's.
-    (cd "$(dirname "$bin")" && SPRITEBENCH_OUTPUT="$csv" exec "$bin" --headless >"$log" 2>&1) &
-    wait_for_output $! "$csv" "$log"
-    if [ -s "$csv" ]; then
-        echo "   ok: $(cat "$csv" | head -1) -> $(basename "$csv")"
+    (cd "$(dirname "$bin")" && SPRITEBENCH_OUTPUT="$out" exec "$bin" --headless >"$log" 2>&1) &
+    wait_for_output $! "$out" "$log"
+    if [ -s "$out" ]; then
+        cat "$out" >>"$csv"
+        rm -f "$out"
+        echo "   ok: $(tail -1 "$csv") -> $(basename "$csv")"
     else
         echo "   FAILED: no output produced (see $log)"
         return 1

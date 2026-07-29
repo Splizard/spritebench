@@ -19,6 +19,14 @@ export LOGS_DIR=$RESULTS_DIR/logs
 export WORK
 export BENCH_LANGS=${BENCH_LANGS:-gdscript cpp rust go musl cs swift odin}
 export BENCH_MODES=${BENCH_MODES:-headless web}
+# Repeating the whole set is how the run carries its own error bars. The
+# repeat is around the language loop rather than inside each language, so the
+# passes interleave: a machine that drifts over the half hour a full set takes
+# then moves every language together instead of penalising whichever happened
+# to run late. The per-run spread turns out to be the dominant uncertainty in
+# this benchmark (larger than most of the differences between languages), so a
+# single pass is a point estimate with no way to tell how much to trust it.
+export BENCH_REPEATS=${BENCH_REPEATS:-1}
 
 mkdir -p "$WORK" "$RESULTS_DIR" "$LOGS_DIR" "${BENCH_CACHE:-/cache}"
 
@@ -26,6 +34,7 @@ echo "== SpriteBench automated run =="
 echo "   platform:  ${BENCH_PLATFORM:-linux}"
 echo "   languages: $BENCH_LANGS"
 echo "   modes:     $BENCH_MODES"
+echo "   repeats:   $BENCH_REPEATS"
 echo "   results:   $RESULTS_DIR"
 nproc_val=$(nproc)
 echo "   cpus:      $nproc_val"
@@ -63,21 +72,33 @@ fi
 
 declare -A STATUS
 overall_start=$SECONDS
-for lang in $BENCH_LANGS; do
-    script=$SCRIPT_DIR/bench_${lang}.sh
-    if [ ! -f "$script" ]; then
-        echo "!! unknown language: $lang (no $script)"
-        STATUS[$lang]="unknown language"
-        continue
+for pass in $(seq 1 "$BENCH_REPEATS"); do
+    export BENCH_PASS=$pass
+    if [ "$BENCH_REPEATS" -gt 1 ]; then
+        echo
+        echo "######## pass $pass/$BENCH_REPEATS ########"
     fi
-    echo
-    echo "==== $lang ===="
-    start=$SECONDS
-    if bash "$script"; then
-        STATUS[$lang]="ok ($((SECONDS - start))s)"
-    else
-        STATUS[$lang]="FAILED ($((SECONDS - start))s)"
-    fi
+    for lang in $BENCH_LANGS; do
+        script=$SCRIPT_DIR/bench_${lang}.sh
+        if [ ! -f "$script" ]; then
+            echo "!! unknown language: $lang (no $script)"
+            STATUS[$lang]="unknown language"
+            continue
+        fi
+        echo
+        echo "==== $lang ===="
+        start=$SECONDS
+        if bash "$script"; then
+            # A pass that fails after an earlier one succeeded is worth seeing,
+            # so a failure is never overwritten by a later ok.
+            case "${STATUS[$lang]:-}" in
+                FAILED*) ;;
+                *) STATUS[$lang]="ok ($((SECONDS - start))s)" ;;
+            esac
+        else
+            STATUS[$lang]="FAILED ($((SECONDS - start))s)"
+        fi
+    done
 done
 
 echo
