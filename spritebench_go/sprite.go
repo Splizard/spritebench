@@ -36,10 +36,7 @@ func NewSprite(texture Texture2D.Instance, fromNode Node.Instance) *Sprite {
 }
 
 func (s *Sprite) Process(delta Float.X) {
-	s.pos = Vector2.Add(s.pos, Vector2.XY{
-		X: Angle.Cos(s.angle) * s.speed * delta,
-		Y: Angle.Sin(s.angle) * s.speed * delta,
-	})
+	s.pos = Vector2.Add(s.pos, Vector2.MulX(Angle.CosSin(s.angle), s.speed*delta))
 	s.AsNode2D().SetPosition(s.pos)
 	if s.pos.X < s.size2.X || s.pos.X > Float.X(s.windowSize.X)-s.size2.X {
 		s.angle = Angle.Pi - s.angle
