@@ -143,6 +143,13 @@ wait_for_output() {
 run_native() {
     local bin=$1 csv=$RESULTS_DIR/${2}_${BENCH_CSV_TAG}sprites.csv label=$3
     local pass=${BENCH_PASS:-1}
+    # The build-only sweep runs every bench script for its build and export
+    # steps and stops here, so no measurement is taken while the machine is
+    # still compiling something. See entrypoint.sh.
+    if [ -n "${BENCH_BUILD_ONLY:-}" ]; then
+        echo "-- built $label (measurement deferred)"
+        return 0
+    fi
     local log=$LOGS_DIR/run.$label.native.log
     # One row per pass, so a run with BENCH_REPEATS>1 carries its own spread
     # and the plot can show it instead of a single point that hides it. The
@@ -176,6 +183,10 @@ run_native() {
 run_web() {
     local dir=$1 html=$2 csv=$RESULTS_DIR/${3}_html5_sprites.csv label=$4
     local log=$LOGS_DIR/run.$label.web.log
+    if [ -n "${BENCH_BUILD_ONLY:-}" ]; then
+        echo "-- built $label web export (measurement deferred)"
+        return 0
+    fi
     # Remove stale outputs so a dead browser can't satisfy the marker check
     # with a previous run's log.
     rm -f "$csv" "$log"

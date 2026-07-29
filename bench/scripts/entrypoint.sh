@@ -72,6 +72,36 @@ fi
 
 declare -A STATUS
 overall_start=$SECONDS
+
+# Build everything before measuring anything. Each bench script compiles its
+# language and then immediately benchmarks it, so the first pass measured
+# every language on a machine that had just finished compiling it -- parallel
+# compile jobs heat the CPU and evict the caches the run is about to want.
+# The effect is large and one-sided: excluding the build pass took Go from
+# 19.9% spread to 1.2% and the panel mean from 17.6% to 12.9%. Later passes
+# never showed it because the builds were already cached, which is exactly
+# what makes it easy to mistake for a first-run quirk of the benchmark.
+#
+# The build sweep runs the same scripts with the measurement stubbed out
+# (see run_native in common.sh), so builds stay incremental afterwards and
+# every measurement pass starts from a fully built, quiescent tree.
+if [ "${BENCH_SKIP_PREBUILD:-}" != 1 ]; then
+    echo
+    echo "######## building all languages ########"
+    for lang in $BENCH_LANGS; do
+        script=$SCRIPT_DIR/bench_${lang}.sh
+        [ -f "$script" ] || continue
+        echo
+        echo "==== $lang (build) ===="
+        BENCH_BUILD_ONLY=1 bash "$script" || STATUS[$lang]="FAILED (build)"
+    done
+    # Let the machine settle before the first measurement: a build sweep this
+    # large leaves the CPU hot, and the first pass is the one that pays.
+    echo
+    echo "-- settling for ${BENCH_SETTLE:-30}s after builds"
+    sleep "${BENCH_SETTLE:-30}"
+fi
+
 for pass in $(seq 1 "$BENCH_REPEATS"); do
     export BENCH_PASS=$pass
     if [ "$BENCH_REPEATS" -gt 1 ]; then
